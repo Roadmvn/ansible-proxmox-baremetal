@@ -1,0 +1,34 @@
+---
+- name: Mise à jour du cache APT et upgrade du système
+  apt:
+    update_cache: yes
+    upgrade: dist
+
+- name: Ajout du dépôt Proxmox
+  template:
+    src: sources.list.j2
+    dest: /etc/apt/sources.list.d/pve-install-repo.list
+
+- name: Ajout de la clé GPG Proxmox
+  apt_key:
+    url: https://enterprise.proxmox.com/debian/proxmox-release-bookworm.gpg
+    state: present
+
+- name: Installation de Proxmox VE et dépendances
+  apt:
+    name:
+      - proxmox-ve
+      - postfix
+      - open-iscsi
+    state: present
+    update_cache: yes
+
+- name: Désactivation du dépôt enterprise (nécessite une licence)
+  lineinfile:
+    path: /etc/apt/sources.list.d/pve-enterprise.list
+    regexp: '^deb'
+    state: absent
+
+- name: Redémarrage du serveur après installation
+  reboot:
+    msg: "Redémarrage après installation de Proxmox" 

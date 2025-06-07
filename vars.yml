@@ -1,0 +1,11 @@
+---
+# Variables optionnelles pour l'installation Proxmox
+# Vous pouvez personnaliser ces valeurs selon vos besoins
+
+# Configuration réseau (optionnel)
+# proxmox_interface: vmbr0
+# proxmox_ip: "{{ ansible_default_ipv4.address }}"
+
+# Configuration email pour Postfix (optionnel)
+# postfix_main_mailer_type: "Internet Site"
+# postfix_mailname: "{{ ansible_fqdn }}" 

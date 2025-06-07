@@ -8,6 +8,8 @@ Playbook **Ansible** minimal pour installer **Proxmox VE 8** sur un serveur déd
 
 ```
 ansible-proxmox-dedicated/
+├── .env.example       # Variables d'environnement (exemple)
+├── .gitignore         # Fichiers à ignorer
 ├── inventory.ini      # Adresse IP du serveur
 ├── playbook.yml       # Playbook principal
 ├── roles/
@@ -19,17 +21,37 @@ ansible-proxmox-dedicated/
 
 ---
 
-## Utilisation rapide
+## Installation et configuration
 
+### 1. Cloner le dépôt
 ```bash
-# 1. Cloner le dépôt
-$ git clone https://github.com/<utilisateur>/ansible-proxmox-dedicated.git
-$ cd ansible-proxmox-dedicated
+git clone https://github.com/<utilisateur>/ansible-proxmox-dedicated.git
+cd ansible-proxmox-dedicated
+```
 
-# 2. Éditer inventory.ini (IP du serveur dédié)
+### 2. Configurer les variables d'environnement
+```bash
+# Copier le fichier d'exemple
+cp .env.example .env
 
-# 3. Lancer le playbook
-$ ansible-playbook -i inventory.ini playbook.yml
+# Éditer avec vos vraies valeurs
+nano .env
+```
+
+### 3. Modifier l'inventaire
+Éditez `inventory.ini` et remplacez l'IP par celle de votre serveur :
+```ini
+[proxmox]
+VOTRE_IP_SERVEUR ansible_user={{ lookup('env', 'PROXMOX_USER') }} ansible_ssh_pass={{ lookup('env', 'PROXMOX_PASS') }} ansible_python_interpreter=/usr/bin/python3
+```
+
+### 4. Lancer l'installation
+```bash
+# Charger les variables d'environnement
+source .env
+
+# Exécuter le playbook
+ansible-playbook -i inventory.ini playbook.yml
 ```
 
 > L'interface Proxmox sera ensuite accessible sur **https\://<IP>:8006**.
@@ -83,5 +105,30 @@ $ ansible-playbook -i inventory.ini playbook.yml
 
 ```ini
 [proxmox]
-167.235.118.227 ansible_user=root ansible_python_interpreter=/usr/bin/python3
-``` 
+VOTRE_IP_SERVEUR ansible_user={{ lookup('env', 'PROXMOX_USER') }} ansible_ssh_pass={{ lookup('env', 'PROXMOX_PASS') }} ansible_python_interpreter=/usr/bin/python3
+```
+
+### .env.example
+
+```bash
+# Variables d'environnement pour Ansible Proxmox
+PROXMOX_USER=adminexample
+PROXMOX_PASS=votre_mot_de_passe_ici
+```
+
+---
+
+## Sécurité
+
+- ✅ Les credentials sont stockés dans des variables d'environnement
+- ✅ Le fichier `.env` est exclu du versioning via `.gitignore`
+- ✅ Seul `.env.example` (sans vraies valeurs) est commité
+- ⚠️ **Important** : Ne jamais commiter le fichier `.env` contenant vos vraies credentials
+
+---
+
+## Prérequis
+
+- **Ansible** installé sur votre machine locale
+- **Accès SSH** au serveur Debian 12 cible
+- **Privilèges root** sur le serveur cible
