@@ -8,7 +8,6 @@ Playbook **Ansible** minimal pour installer **Proxmox VE 8** sur un serveur déd
 
 ```
 ansible-proxmox-dedicated/
-├── .env.example       # Variables d'environnement (exemple)
 ├── .gitignore         # Fichiers à ignorer
 ├── inventory.ini      # Adresse IP du serveur
 ├── playbook.yml       # Playbook principal
@@ -29,29 +28,27 @@ git clone https://github.com/<utilisateur>/ansible-proxmox-dedicated.git
 cd ansible-proxmox-dedicated
 ```
 
-### 2. Configurer les variables d'environnement
+### 2. Vérifier l'accès SSH
+Assurez-vous que vous pouvez vous connecter au serveur en SSH :
 ```bash
-# Copier le fichier d'exemple
-cp .env.example .env
-
-# Éditer avec vos vraies valeurs
-nano .env
+# Connectez-vous une première fois pour accepter la clé du serveur
+ssh root@VOTRE_IP_SERVEUR
 ```
 
 ### 3. Modifier l'inventaire
 Éditez `inventory.ini` et remplacez l'IP par celle de votre serveur :
 ```ini
 [proxmox]
-VOTRE_IP_SERVEUR ansible_user={{ lookup('env', 'PROXMOX_USER') }} ansible_ssh_pass={{ lookup('env', 'PROXMOX_PASS') }} ansible_python_interpreter=/usr/bin/python3
+VOTRE_IP_SERVEUR
 ```
 
 ### 4. Lancer l'installation
 ```bash
-# Charger les variables d'environnement
-source .env
+# Méthode 1: Mode interactif (recommandé pour un dépôt public)
+ansible-playbook -i inventory.ini -u root -k -b playbook.yml
 
-# Exécuter le playbook
-ansible-playbook -i inventory.ini playbook.yml
+# Méthode 2: Spécifier le mot de passe en ligne de commande (attention aux logs)
+ansible-playbook -i inventory.ini -u root -e "ansible_ssh_pass=VOTRE_MOT_DE_PASSE" playbook.yml
 ```
 
 > L'interface Proxmox sera ensuite accessible sur **https\://<IP>:8006**.
@@ -105,25 +102,17 @@ ansible-playbook -i inventory.ini playbook.yml
 
 ```ini
 [proxmox]
-VOTRE_IP_SERVEUR ansible_user={{ lookup('env', 'PROXMOX_USER') }} ansible_ssh_pass={{ lookup('env', 'PROXMOX_PASS') }} ansible_python_interpreter=/usr/bin/python3
-```
-
-### .env.example
-
-```bash
-# Variables d'environnement pour Ansible Proxmox
-PROXMOX_USER=adminexample
-PROXMOX_PASS=votre_mot_de_passe_ici
+VOTRE_IP_SERVEUR
 ```
 
 ---
 
 ## Sécurité
 
-- ✅ Les credentials sont stockés dans des variables d'environnement
-- ✅ Le fichier `.env` est exclu du versioning via `.gitignore`
-- ✅ Seul `.env.example` (sans vraies valeurs) est commité
-- ⚠️ **Important** : Ne jamais commiter le fichier `.env` contenant vos vraies credentials
+- ✅ Aucun credential n'est stocké dans le code
+- ✅ Mot de passe demandé interactivement avec l'option `-k`
+- ✅ Possibilité d'utiliser des clés SSH pour une meilleure sécurité
+- ⚠️ **Important** : Ne jamais stocker de mots de passe dans votre dépôt, même dans les variables
 
 ---
 

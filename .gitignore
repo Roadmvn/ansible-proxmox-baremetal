@@ -1,15 +1,2 @@
-# Variables d'environnement
 .env
-.env.local
-
-# Fichiers Ansible temporaires
 *.retry
-*.log
-
-# Fichiers de backup
-*~
-*.bak
-
-# Fichiers système
-.DS_Store
-Thumbs.db
