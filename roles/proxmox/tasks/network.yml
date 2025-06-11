@@ -1,0 +1,41 @@
+---
+# Configuration vmbr1
+- name: Ensure ifupdown2 package is installed
+  ansible.builtin.apt:
+    name: ifupdown2
+    state: present
+    update_cache: yes
+
+- name: Check if vmbr1 already exists in interfaces file
+  ansible.builtin.command: grep -q "^auto vmbr1" /etc/network/interfaces
+  register: vmbr1_exists
+  changed_when: false
+  failed_when: false
+
+- name: Add vmbr1 bridge configuration
+  ansible.builtin.blockinfile:
+    path: /etc/network/interfaces
+    block: |
+
+      auto vmbr1
+      iface vmbr1 inet static
+            address {{ vmbr1_ipaddr }}/{{ vmbr1_netmask }}
+            bridge_ports none
+            bridge_stp off
+            bridge_fd 0
+  when: vmbr1_exists.rc != 0
+  register: vmbr1_config
+
+- name: Apply network configuration
+  ansible.builtin.shell: |
+    set -e
+    if ip link show vmbr1 >/dev/null 2>&1; then
+      echo "vmbr1 already exists, reconfiguring..."
+      ifdown vmbr1 && ifup vmbr1
+    else
+      echo "Creating new vmbr1 interface..."
+      ifup vmbr1
+    fi
+  when: vmbr1_config.changed
+  register: network_reload
+  changed_when: network_reload.rc == 0

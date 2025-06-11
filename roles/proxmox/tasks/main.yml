@@ -4,9 +4,9 @@
     update_cache: yes
     upgrade: dist
 
-- name: Ajout du dépôt Proxmox
+- name: Ajout du dépôt Proxmox édition gratuite
   template:
-    src: sources.list.j2
+    src: proxmox_free_edition_repo.j2
     dest: /etc/apt/sources.list.d/pve-install-repo.list
 
 - name: Ajout de la clé GPG Proxmox
@@ -26,9 +26,9 @@
 - name: Désactivation du dépôt enterprise (nécessite une licence)
   lineinfile:
     path: /etc/apt/sources.list.d/pve-enterprise.list
-    regexp: '^deb'
+    regexp: "^deb"
     state: absent
 
 - name: Redémarrage du serveur après installation
   reboot:
-    msg: "Redémarrage après installation de Proxmox" 
+    msg: "Redémarrage après installation de Proxmox"

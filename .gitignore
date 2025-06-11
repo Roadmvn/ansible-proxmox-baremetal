@@ -1,3 +1,4 @@
 .env
 *.retry
 .vscode/
+secret_vars.yml

@@ -1,0 +1,7 @@
+---
+- hosts: proxmox
+  become: true
+  vars_files:
+    - ../secret_vars.yml
+  roles:
+    - proxmox

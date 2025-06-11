@@ -1,0 +1,9 @@
+---
+- hosts: proxmox
+  become: true
+  vars_files:
+    - ../secret_vars.yml
+  tasks:
+    - import_role:
+        name: proxmox
+        tasks_from: network

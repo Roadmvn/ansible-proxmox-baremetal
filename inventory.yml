@@ -3,7 +3,7 @@ all:
     proxmox:
       hosts:
         proxmox_server:
-          ansible_host: "{{ lookup('env', 'PROXMOX_IP') }}"
-          ansible_user: "{{ lookup('env', 'PROXMOX_USER') }}"
-          ansible_ssh_pass: "{{ lookup('env', 'PROXMOX_PASS') }}"
+          ansible_host: "{{ proxmox_host }}"
+          ansible_user: "{{ proxmox_user }}"
+          ansible_ssh_pass: "{{ proxmox_password }}"
           ansible_python_interpreter: /usr/bin/python3

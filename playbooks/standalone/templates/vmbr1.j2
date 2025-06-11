@@ -1,0 +1,9 @@
+auto vmbr1
+iface vmbr1 inet static
+    address {{ vmbr1_ipaddr }}/{{ vmbr1_netmask }}
+    bridge_ports {{ vmbr1_bridge_ports | default('none') }}
+    bridge_stp {{ vmbr1_bridge_stp | default('off') }}
+    bridge_fd {{ vmbr1_bridge_fd | default('0') }}
+{% if vmbr1_comment is defined %}
+    # {{ vmbr1_comment }}
+{% endif %} 
