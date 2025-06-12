@@ -134,4 +134,4 @@ ansible-playbook -i inventory.yml playbooks/standalone/test_vmbr1_vm.yml -e "vm_
 
 ## Licence
 
-[Licence à préciser]
+By @Roadmvn
