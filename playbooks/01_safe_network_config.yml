@@ -1,0 +1,20 @@
+---
+# Playbook pour la configuration réseau sécurisée (vmbr0 pour Hetzner)
+- hosts: proxmox
+  become: yes
+  gather_facts: true # Les faits collectés ici peuvent être utiles pour le rôle
+
+  pre_tasks: # Crucial : S'assure que le kernel PVE est actif et que SSH fonctionne avant de tenter des modifications réseau.
+    - name: Vérification du kernel PVE avant de tenter des modifications réseau
+      # Cette vérification devrait idéalement être plus robuste, par ex., vérifier la connectivité SSH depuis le nœud de contrôle.
+      # Ceci est une vérification basique du kernel. Une vérification plus robuste impliquerait d'essayer de se connecter en SSH.
+      ansible.builtin.assert:
+        that:
+          - "'pve' in ansible_kernel"
+        fail_msg: "CRITICAL : Non exécution d'un kernel PVE. Abandon de la configuration réseau. Veuillez vous assurer que Proxmox a été installé correctement et que le système a redémarré avec un kernel PVE."
+        quiet: yes
+
+  roles:
+    - role: network_bridge
+      # Plus tard, nous pourrions passer des variables spécifiques à ce rôle ici
+      # par exemple, les détails de la configuration IP si elles ne sont pas dans secret_vars.yml

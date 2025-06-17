@@ -1,0 +1,28 @@
+---
+# Handlers pour le rôle de configuration du pont réseau
+
+- name: Restart networking service
+  listen: "Restart networking service"
+  ansible.builtin.service:
+    name: networking
+    state: restarted
+  # Note : Redémarrer le service réseau peut être peu fiable.
+  # Un redémarrage complet est souvent plus sûr après des modifications d'interface.
+  # Envisagez d'utiliser le handler de redémarrage ci-dessous en cas de problèmes.
+
+# Handler pour un redémarrage complet, peut être notifié si un simple redémarrage du réseau est insuffisant
+- name: Reboot and wait for system to come back (network_bridge)
+  listen: "Reboot and wait for system to come back (network_bridge)" # Nom unique pour cette instance de handler
+  block:
+    - name: Reboot the server after network changes
+      ansible.builtin.reboot:
+        reboot_timeout: 3600
+        connect_timeout: 5
+        test_command: whoami
+      ignore_errors: true
+
+    - name: Wait for SSH to be available after reboot (network_bridge)
+      ansible.builtin.wait_for_connection:
+        delay: 30
+        timeout: 600
+        sleep: 15

@@ -1,12 +1,6 @@
 ---
 - name: Installation complète Proxmox
   import_playbook: install_proxmox.yml
-  vars:
-    vars_files:
-      - ../secret_vars.yml
 
 - name: Configuration réseau Proxmox
   import_playbook: configure_network.yml
-  vars:
-    vars_files:
-      - ../secret_vars.yml

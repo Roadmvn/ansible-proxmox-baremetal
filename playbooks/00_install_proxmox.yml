@@ -1,0 +1,7 @@
+---
+# Playbook pour l'installation initiale de Proxmox VE
+- hosts: proxmox # Assurez-vous que ce groupe existe dans votre inventory/hosts.ini
+  become: yes
+  gather_facts: yes # Important pour collecter les faits (variables système) pour les tâches et vérifications ultérieures
+  roles:
+    - proxmox_install

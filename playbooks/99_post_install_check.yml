@@ -1,0 +1,7 @@
+---
+# Playbook pour les vérifications post-installation
+- hosts: proxmox
+  become: yes # Certaines commandes dans le rôle pourraient le nécessiter, bien que la plupart des vérifications soient en lecture seule
+  gather_facts: true # Utile pour ansible_kernel et ansible_host s'ils ne sont pas explicitement passés
+  roles:
+    - post_check

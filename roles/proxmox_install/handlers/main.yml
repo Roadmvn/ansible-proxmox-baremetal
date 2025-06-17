@@ -1,0 +1,27 @@
+---
+# Handlers pour le rôle d'installation de Proxmox VE
+
+- name: Reboot and wait for system to come back
+  listen: "Reboot and wait for system to come back" # Écoute explicitement la chaîne de notification
+  block:
+    - name: Reboot the server
+      ansible.builtin.reboot:
+        reboot_timeout: 3600 # Délai d'attente long pour la commande de redémarrage elle-même
+        connect_timeout: 5 # Délai d'attente pour la tentative de connexion initiale après redémarrage par ce module
+        test_command: whoami # Commande pour tester si l'hôte est de nouveau opérationnel
+      ignore_errors: true # Important : ignorer si le module de redémarrage lui-même ne parvient pas à se reconnecter
+
+    - name: Wait for SSH to be available after reboot
+      ansible.builtin.wait_for_connection:
+        delay: 30 # Délai initial avant la première vérification
+        timeout: 600 # Temps total d'attente pour la connexion
+        sleep: 15 # Intervalle de pause entre les vérifications
+      # Pas besoin d'ignore_errors ici, s'il échoue, le playbook devrait s'arrêter
+
+- name: Refresh proxmox-boot-tool
+  listen: "Refresh proxmox-boot-tool"
+  ansible.builtin.command: proxmox-boot-tool refresh
+  args:
+    warn: false # Supprimer les avertissements s'il y en a
+  changed_when: false # Cette commande ne change pas l'état de manière idempotente pour Ansible
+  failed_when: false # Ou ajouter une vérification d'erreur plus spécifique si nécessaire, pour l'instant, au mieux
