@@ -1,6 +1,0 @@
----
-- name: Installation complète Proxmox
-  import_playbook: install_proxmox.yml
-
-- name: Configuration réseau Proxmox
-  import_playbook: configure_network.yml

@@ -2,7 +2,6 @@
 # Handlers pour le rôle d'installation de Proxmox VE
 
 - name: Reboot and wait for system to come back
-  listen: "Reboot and wait for system to come back" # Écoute explicitement la chaîne de notification
   block:
     - name: Reboot the server
       ansible.builtin.reboot:
@@ -19,9 +18,10 @@
       # Pas besoin d'ignore_errors ici, s'il échoue, le playbook devrait s'arrêter
 
 - name: Refresh proxmox-boot-tool
-  listen: "Refresh proxmox-boot-tool"
   ansible.builtin.command: proxmox-boot-tool refresh
   args:
-    warn: false # Supprimer les avertissements s'il y en a
-  changed_when: false # Cette commande ne change pas l'état de manière idempotente pour Ansible
-  failed_when: false # Ou ajouter une vérification d'erreur plus spécifique si nécessaire, pour l'instant, au mieux
+    warn: false # Supprime les avertissements potentiels de la commande
+  changed_when: false # La commande refresh ne modifie pas l'état de manière idempotente pour Ansible,
+                      # mais son exécution est souhaitée.
+  # proxmox-boot-tool doit être exécuté en tant que root ;
+  # become: yes est hérité du playbook principal.
