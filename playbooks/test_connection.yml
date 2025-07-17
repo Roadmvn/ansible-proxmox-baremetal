@@ -1,0 +1,28 @@
+---
+- name: Test de connexion aux VMs
+  hosts: localhost
+  gather_facts: no
+  vars:
+    jump_host: "root@167.235.118.227"
+    private_vms:
+      - { user: "imane", ip: "192.168.100.10" }
+      - { user: "imane", ip: "192.168.100.20" }
+      - { user: "imane", ip: "192.168.100.30" }
+  tasks:
+    - name: "Tester la connexion directe au Jump Host (proxy-vm)"
+      wait_for:
+        host: "167.235.118.227"
+        port: 22
+        timeout: 30
+      delegate_to: localhost
+
+    - name: "Tester la connexion SSH aux VMs privées via le Jump Host"
+      command: "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -J {{ jump_host }} {{ item.user }}@{{ item.ip }} 'hostname'"
+      loop: "{{ private_vms }}"
+      register: ssh_test_result
+      changed_when: false
+
+    - name: "Afficher les résultats des tests de connexion"
+      debug:
+        msg: "Connexion à {{ item.item.ip }} réussie. Hostname: {{ item.stdout }}"
+      loop: "{{ ssh_test_result.results }}" 

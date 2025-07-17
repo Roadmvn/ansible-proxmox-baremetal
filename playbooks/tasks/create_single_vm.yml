@@ -1,0 +1,54 @@
+---
+- name: "Vérifier la présence du template {{ vm.template }}"
+  command: "pvesh get /nodes/{{ inventory_hostname }}/storage/{{ vm.storage }}/content -content iso,vztmpl,backup"
+  register: storage_content
+  changed_when: false
+  delegate_to: localhost
+
+- name: "Stopper la tâche si le template n'existe pas"
+  fail:
+    msg: "Le template {{ vm.template }} n'existe pas sur le stockage {{ vm.storage }}. Veuillez le créer d'abord."
+  when: "vm.template not in storage_content.stdout"
+
+- name: "Créer la VM {{ vm.name }}"
+  command: >-
+    qm create {{ vm.vmid }}
+    --name {{ vm.name }}
+    --memory {{ vm.memory }}
+    --cores {{ vm.cores }}
+    --net0 virtio,bridge={{ vm.bridge }}
+    --scsihw virtio-scsi-pci
+  register: create_vm_result
+  changed_when: "'OK' in create_vm_result.stdout"
+
+- name: "Importer le disque depuis le template"
+  command: >-
+    qm importdisk {{ vm.vmid }} {{ vm.template }} {{ vm.storage }}
+  when: create_vm_result.changed
+
+- name: "Attacher le disque à la VM"
+  command: >-
+    qm set {{ vm.vmid }}
+    --scsi0 {{ vm.storage }}:vm-{{ vm.vmid }}-disk-0
+  when: create_vm_result.changed
+
+- name: "Configurer le boot sur le nouveau disque"
+  command: >-
+    qm set {{ vm.vmid }}
+    --boot c --bootdisk scsi0
+  when: create_vm_result.changed
+
+- name: "Configurer l'agent QEMU Guest"
+  command: >-
+    qm set {{ vm.vmid }} --agent enabled=1
+  when: create_vm_result.changed
+
+- name: "Configurer l'IP avec Cloud-Init"
+  command: >-
+    qm set {{ vm.vmid }}
+    --ipconfig0 ip={{ vm.ip }},gw={{ vm.gateway }}
+  when: vm.ip is defined and vm.gateway is defined and create_vm_result.changed
+
+- name: "Démarrer la VM"
+  command: "qm start {{ vm.vmid }}"
+  when: create_vm_result.changed 

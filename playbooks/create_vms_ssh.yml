@@ -1,0 +1,12 @@
+---
+- name: Créer des VMs Proxmox via SSH avec des commandes qm
+  hosts: proxmox
+  gather_facts: no
+  vars_files:
+    - vm_config.example.yml
+  tasks:
+    - name: Créer et configurer les VMs
+      include_tasks: playbooks/tasks/create_single_vm.yml
+      loop: "{{ vms }}"
+      loop_control:
+        loop_var: vm 

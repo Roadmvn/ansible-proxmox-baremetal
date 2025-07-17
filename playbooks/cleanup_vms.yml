@@ -1,0 +1,30 @@
+---
+- name: Playbook pour nettoyer les VMs
+  hosts: proxmox
+  gather_facts: no
+  vars:
+    # La liste des VMIDs à supprimer est passée en extra-var
+    # exemple: ansible-playbook ... --extra-vars "vm_ids=[801, 802]"
+    vm_ids_to_delete: "{{ vm_ids | default([]) }}"
+  tasks:
+    - name: "Arrêter la VM {{ item }}"
+      command: "qm stop {{ item }}"
+      register: stop_result
+      failed_when: "'VM is not running' not in stop_result.stderr and stop_result.rc != 0"
+      changed_when: stop_result.rc == 0
+      loop: "{{ vm_ids_to_delete }}"
+
+    - name: "Attendre que la VM {{ item }} soit complètement arrêtée"
+      command: "qm status {{ item }}"
+      register: status_result
+      until: "'status: stopped' in status_result.stdout"
+      retries: 10
+      delay: 5
+      when: stop_result.changed
+      loop: "{{ vm_ids_to_delete }}"
+
+    - name: "Supprimer la VM {{ item }}"
+      command: "qm destroy {{ item }}"
+      register: destroy_result
+      changed_when: destroy_result.rc == 0
+      loop: "{{ vm_ids_to_delete }}" 
