@@ -49,14 +49,14 @@ L'objectif est de fournir une méthode rapide et reproductible pour créer une a
 ## ⚙️ Configuration
 
 1. **Cloner le projet** :
-   ```bash
+    ```bash
    git clone <URL_DU_REPO>
-   cd ansible-proxmox-baremetal
-   ```
+    cd ansible-proxmox-baremetal
+    ```
 
 2. **Configurer l'inventaire (`hosts`)** :
-   ```ini
-   [proxmox]
+        ```ini
+        [proxmox]
    <IP_PROXMOX> ansible_user=root
    ```
 
@@ -71,12 +71,12 @@ L'objectif est de fournir une méthode rapide et reproductible pour créer une a
 Les scripts suivants simplifient l'utilisation des playbooks :
 
 - **Créer toutes les VMs** :
-  ```bash
+    ```bash
   ./run_automation.sh
-  ```
+    ```
 
 - **Vérifier l'état et la connectivité** :
-  ```bash
+    ```bash
   ./check_automation.sh
   ```
 
