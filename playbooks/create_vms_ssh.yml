@@ -3,10 +3,11 @@
   hosts: proxmox
   gather_facts: no
   vars_files:
-    - vm_config.example.yml
+    - ../secret_vars.yml # Variables de connexion Proxmox
+    - ../vm_config.example.yml # Configuration des VMs à créer
   tasks:
     - name: Créer et configurer les VMs
-      include_tasks: playbooks/tasks/create_single_vm.yml
+      include_tasks: tasks/create_single_vm.yml
       loop: "{{ vms }}"
       loop_control:
         loop_var: vm 

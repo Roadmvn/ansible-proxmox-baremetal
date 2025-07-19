@@ -38,17 +38,27 @@
     --boot c --bootdisk scsi0
   when: create_vm_result.changed
 
-- name: "Configurer l'agent QEMU Guest"
-  command: >-
-    qm set {{ vm.vmid }} --agent enabled=1
+- name: "Redimensionner le disque pour utiliser tout l'espace alloué"
+  command: "qm resize {{ vm.vmid }} scsi0 +{{ vm.disk }}G"
   when: create_vm_result.changed
 
-- name: "Configurer l'IP avec Cloud-Init"
+- name: "Configurer l'agent QEMU Guest"
+  command: "qm set {{ vm.vmid }} --agent enabled=1"
+  when: create_vm_result.changed
+
+- name: "Configurer l'IP avec Cloud-Init de manière robuste"
   command: >-
     qm set {{ vm.vmid }}
     --ipconfig0 ip={{ vm.ip }},gw={{ vm.gateway }}
+    --nameserver 1.1.1.1
+    --searchdomain local
   when: vm.ip is defined and vm.gateway is defined and create_vm_result.changed
 
 - name: "Démarrer la VM"
   command: "qm start {{ vm.vmid }}"
+  when: create_vm_result.changed
+
+- name: "Pause pour laisser le temps à Cloud-Init de s'exécuter"
+  pause:
+    seconds: 20
   when: create_vm_result.changed 
