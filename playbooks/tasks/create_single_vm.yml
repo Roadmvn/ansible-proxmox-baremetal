@@ -1,64 +1,43 @@
 ---
-- name: "Vérifier la présence du template {{ vm.template }}"
-  command: "pvesh get /nodes/{{ inventory_hostname }}/storage/{{ vm.storage }}/content -content iso,vztmpl,backup"
-  register: storage_content
-  changed_when: false
-  delegate_to: localhost
-
-- name: "Stopper la tâche si le template n'existe pas"
-  fail:
-    msg: "Le template {{ vm.template }} n'existe pas sur le stockage {{ vm.storage }}. Veuillez le créer d'abord."
-  when: "vm.template not in storage_content.stdout"
-
-- name: "Créer la VM {{ vm.name }}"
+- name: "Cloner la VM {{ vm.name }} depuis le template {{ vm.template }}"
   command: >-
-    qm create {{ vm.vmid }}
-    --name {{ vm.name }}
-    --memory {{ vm.memory }}
+    qm clone 9000 {{ vm.vmid }} 
+    --name {{ vm.name }} 
+    --full 
+    --storage {{ vm.storage }}
+  register: clone_result
+  changed_when: "'successfully created' in clone_result.stdout"
+
+- name: "Configurer les ressources (CPU, RAM) pour {{ vm.name }}"
+  command: >-
+    qm set {{ vm.vmid }}
     --cores {{ vm.cores }}
+    --memory {{ vm.memory }}
+  when: clone_result.changed
+
+- name: "Configurer le réseau pour {{ vm.name }} (sans pare-feu Proxmox)"
+  command: >-
+    qm set {{ vm.vmid }}
     --net0 virtio,bridge={{ vm.bridge }}
-    --scsihw virtio-scsi-pci
-  register: create_vm_result
-  changed_when: "'OK' in create_vm_result.stdout"
+  when: clone_result.changed
 
-- name: "Importer le disque depuis le template"
-  command: >-
-    qm importdisk {{ vm.vmid }} {{ vm.template }} {{ vm.storage }}
-  when: create_vm_result.changed
-
-- name: "Attacher le disque à la VM"
-  command: >-
-    qm set {{ vm.vmid }}
-    --scsi0 {{ vm.storage }}:vm-{{ vm.vmid }}-disk-0
-  when: create_vm_result.changed
-
-- name: "Configurer le boot sur le nouveau disque"
-  command: >-
-    qm set {{ vm.vmid }}
-    --boot c --bootdisk scsi0
-  when: create_vm_result.changed
-
-- name: "Redimensionner le disque pour utiliser tout l'espace alloué"
-  command: "qm resize {{ vm.vmid }} scsi0 +{{ vm.disk }}G"
-  when: create_vm_result.changed
-
-- name: "Configurer l'agent QEMU Guest"
-  command: "qm set {{ vm.vmid }} --agent enabled=1"
-  when: create_vm_result.changed
-
-- name: "Configurer l'IP avec Cloud-Init de manière robuste"
+- name: "Configurer l'IP avec Cloud-Init pour {{ vm.name }}"
   command: >-
     qm set {{ vm.vmid }}
     --ipconfig0 ip={{ vm.ip }},gw={{ vm.gateway }}
     --nameserver 1.1.1.1
     --searchdomain local
-  when: vm.ip is defined and vm.gateway is defined and create_vm_result.changed
+  when: vm.ip is defined and vm.gateway is defined and clone_result.changed
 
-- name: "Démarrer la VM"
+- name: "Redimensionner le disque pour {{ vm.name }}"
+  command: "qm resize {{ vm.vmid }} scsi0 {{ vm.disk }}G"
+  when: clone_result.changed
+
+- name: "Démarrer la VM {{ vm.name }}"
   command: "qm start {{ vm.vmid }}"
-  when: create_vm_result.changed
+  when: clone_result.changed
 
 - name: "Pause pour laisser le temps à Cloud-Init de s'exécuter"
   pause:
-    seconds: 20
-  when: create_vm_result.changed 
+    seconds: 45
+  when: clone_result.changed 

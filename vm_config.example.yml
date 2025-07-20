@@ -1,11 +1,11 @@
 vms:
   - name: proxy-vm
     vmid: 801
-    template: "ubuntu-2204-cloudinit-template"
+    template: "ubuntu-2204-template-base"
     cores: 1
     memory: 1024
     disk: 10
-    storage: "local-lvm"
+    storage: "local"
     bridge: "vmbr0"
     ip: "167.235.118.228/26" # IP publique de la VM, pas du serveur
     gateway: "167.235.118.193" # La vraie passerelle de ton sous-réseau
@@ -14,33 +14,33 @@ vms:
 
   - name: frontend-vm
     vmid: 802
-    template: "ubuntu-2204-cloudinit-template"
+    template: "ubuntu-2204-template-base"
     cores: 2
     memory: 2048
     disk: 20
-    storage: "local-lvm"
+    storage: "local"
     bridge: "vmbr1"
     ip: "10.0.1.10/24"
     gateway: "10.0.1.1"
 
   - name: backend-vm
     vmid: 803
-    template: "ubuntu-2204-cloudinit-template"
+    template: "ubuntu-2204-template-base"
     cores: 2
     memory: 2048
     disk: 30
-    storage: "local-lvm"
+    storage: "local"
     bridge: "vmbr1"
     ip: "10.0.1.20/24"
     gateway: "10.0.1.1"
 
   - name: database-vm
     vmid: 804
-    template: "ubuntu-2204-cloudinit-template"
+    template: "ubuntu-2204-template-base"
     cores: 2
     memory: 4096
     disk: 50
-    storage: "local-lvm"
+    storage: "local"
     bridge: "vmbr1"
     ip: "10.0.1.30/24"
     gateway: "10.0.1.1" 

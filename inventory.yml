@@ -1,9 +1,14 @@
-all:
-  children:
-    proxmox:
-      hosts:
-        proxmox_server:
-          ansible_host: "{{ proxmox_host }}"
-          ansible_user: "{{ proxmox_user }}"
-          ansible_ssh_pass: "{{ proxmox_password }}"
-          ansible_python_interpreter: /usr/bin/python3
+proxmox:
+  hosts:
+    proxmox_server:
+      ansible_host: "{{ proxmox_host_ip }}"
+      ansible_user: "{{ proxmox_api_user | regex_replace('@pve', '') }}" # Extrait 'root' de 'root@pve'
+      ansible_ssh_private_key_file: "~/.ssh/id_rsa" # Assurez-vous que cette clé est configurée pour le serveur
+      ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
+      # Variables Proxmox pour les playbooks
+      proxmox_host: "{{ proxmox_host_ip }}"
+      proxmox_node: "pve"
+      proxmox_api_user: "{{ proxmox_api_user }}"
+      proxmox_api_password: "{{ proxmox_api_password }}"
+      proxmox_api_host: "{{ proxmox_host_ip }}"
