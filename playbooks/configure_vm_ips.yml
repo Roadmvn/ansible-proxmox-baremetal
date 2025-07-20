@@ -1,0 +1,135 @@
+---
+- name: Configurer les IPs statiques des VMs privées
+  hosts: proxmox_server
+  gather_facts: false
+  vars_files:
+    - ../secret_vars.yml
+    - ../vm_config.example.yml
+
+  tasks:
+    - name: Isoler les VMs privées (celles sur vmbr1)
+      ansible.builtin.set_fact:
+        private_vms_to_configure: "{{ vms | selectattr('bridge', 'equalto', 'vmbr1') | list }}"
+
+    - name: Afficher le plan de configuration
+      ansible.builtin.debug:
+        msg: |
+          =============================================
+          CONFIGURATION DES IPs STATIQUES
+          =============================================
+          VMs à configurer :
+          {% for vm in private_vms_to_configure %}
+          - {{ vm.name }} ({{ vm.vmid }}) : {{ vm.ip }}
+          {% endfor %}
+          =============================================
+
+    - name: Vérifier que les VMs sont en cours d'exécution
+      ansible.builtin.command: "qm status {{ item.vmid }}"
+      loop: "{{ private_vms_to_configure }}"
+      register: vm_status_check
+      failed_when: "'running' not in vm_status_check.stdout"
+
+    - name: Attendre que l'agent QEMU soit disponible (attente prolongée)
+      ansible.builtin.command: "qm guest exec {{ item.vmid }} -- /bin/true"
+      loop: "{{ private_vms_to_configure }}"
+      register: agent_wait
+      until: agent_wait.rc == 0
+      retries: 60  # 5 minutes d'attente maximum
+      delay: 5
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: S'assurer que le service qemu-guest-agent est actif
+      ansible.builtin.command: "qm guest exec {{ item.vmid }} -- systemctl start qemu-guest-agent"
+      loop: "{{ private_vms_to_configure }}"
+      loop_control:
+        label: "{{ item.name }}"
+      ignore_errors: true
+
+    - name: Créer le répertoire netplan si nécessaire
+      ansible.builtin.command: "qm guest exec {{ item.vmid }} -- mkdir -p /etc/netplan"
+      loop: "{{ private_vms_to_configure }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Sauvegarder la configuration réseau existante
+      ansible.builtin.command: "qm guest exec {{ item.vmid }} -- cp /etc/netplan/50-cloud-init.yaml /etc/netplan/50-cloud-init.yaml.bak"
+      loop: "{{ private_vms_to_configure }}"
+      loop_control:
+        label: "{{ item.name }}"
+      ignore_errors: true
+
+    - name: Configurer l'IP statique pour chaque VM
+      ansible.builtin.command: |
+        qm guest exec {{ item.vmid }} -- bash -c "cat > /etc/netplan/50-cloud-init.yaml << 'EOF'
+        network:
+          version: 2
+          ethernets:
+            ens18:
+              dhcp4: no
+              addresses: [{{ item.ip }}]
+              gateway4: {{ item.gateway }}
+              nameservers:
+                addresses: [1.1.1.1, 8.8.8.8]
+        EOF"
+      loop: "{{ private_vms_to_configure }}"
+      loop_control:
+        label: "{{ item.name }}"
+      register: netplan_config_result
+
+    - name: Appliquer la configuration réseau
+      ansible.builtin.command: "qm guest exec {{ item.vmid }} -- netplan apply"
+      loop: "{{ private_vms_to_configure }}"
+      loop_control:
+        label: "{{ item.name }}"
+      register: netplan_apply_result
+
+    - name: Attendre la stabilisation du réseau
+      ansible.builtin.pause:
+        seconds: 10
+
+    - name: Vérifier la connectivité réseau
+      ansible.builtin.command: "qm guest exec {{ item.vmid }} -- ping -c 3 {{ item.gateway }}"
+      loop: "{{ private_vms_to_configure }}"
+      loop_control:
+        label: "{{ item.name }}"
+      register: connectivity_test
+      failed_when: false
+
+    - name: Vérifier l'IP configurée
+      ansible.builtin.command: "qm guest exec {{ item.vmid }} -- ip addr show ens18"
+      loop: "{{ private_vms_to_configure }}"
+      loop_control:
+        label: "{{ item.name }}"
+      register: ip_verification
+      failed_when: false
+
+    - name: Afficher le rapport final
+      ansible.builtin.debug:
+        msg: |
+          =============================================
+          RAPPORT DE CONFIGURATION - {{ item.item.name }}
+          =============================================
+          Configuration Netplan : {{ 'SUCCÈS' if netplan_config_result.results[ansible_loop.index0] is succeeded else 'ÉCHEC' }}
+          Application Netplan : {{ 'SUCCÈS' if netplan_apply_result.results[ansible_loop.index0] is succeeded else 'ÉCHEC' }}
+          Ping vers {{ item.item.gateway }} : {{ 'SUCCÈS' if connectivity_test.results[ansible_loop.index0].rc == 0 else 'ÉCHEC' }}
+          IP configurée : {{ item.item.ip }}
+          =============================================
+      loop: "{{ private_vms_to_configure }}"
+      loop_control:
+        index_var: ansible_loop
+
+    - name: Résumé global
+      ansible.builtin.debug:
+        msg: |
+          =============================================
+          CONFIGURATION TERMINÉE
+          =============================================
+          {% for vm in private_vms_to_configure %}
+          - {{ vm.name }} : {{ vm.ip }} (Gateway: {{ vm.gateway }})
+          {% endfor %}
+          
+          Vous pouvez maintenant vous connecter aux VMs :
+          - Via proxy-vm : ssh user@10.0.1.X
+          - Depuis Proxmox : qm terminal VMID
+          ============================================= 

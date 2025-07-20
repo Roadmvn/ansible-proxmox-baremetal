@@ -1,0 +1,135 @@
+# playbooks/manage_vm_network.yml
+---
+- name: Gérer et Réparer la Configuration Réseau (Mode Standalone)
+  hosts: proxmox_server
+  gather_facts: false
+  vars_files:
+    - ../secret_vars.yml
+    - ../vm_config.example.yml
+
+  vars:
+    action: "diagnose" # 'diagnose' ou 'fix'
+
+  tasks:
+    - name: Valider l'action spécifiée
+      ansible.builtin.assert:
+        that:
+          - action in ['diagnose', 'fix']
+        fail_msg: "Action invalide. Choisissez 'diagnose' ou 'fix'."
+        quiet: true
+
+    # ========================================================================
+    # == BLOC DE DIAGNOSTIC (uniquement avec des commandes shell)
+    # ========================================================================
+    - name: "DIAGNOSTIC | Collecter les informations des VMs"
+      when: action == 'diagnose'
+      block:
+        - name: "Obtenir le statut et la configuration"
+          ansible.builtin.shell: |
+            qm status {{ item.vmid }} | awk '{print $2}' && \
+            qm config {{ item.vmid }} | grep '^net0:' | sed -n 's/.*bridge=\\([^,]*\\).*/\\1/p'
+          args:
+            executable: /bin/bash
+          loop: "{{ vms }}"
+          register: vm_info
+          changed_when: false
+          ignore_errors: true
+
+        - name: "Tester l'agent QEMU"
+          ansible.builtin.command: "qm guest exec {{ item.vmid }} -- /bin/true"
+          loop: "{{ vms }}"
+          register: agent_status
+          changed_when: false
+          ignore_errors: true
+
+        - name: "Afficher le rapport de diagnostic"
+          ansible.builtin.debug:
+            msg: |
+              --------------------------------------------------
+              VM: {{ item.item.name }} (VMID: {{ item.item.vmid }})
+              --------------------------------------------------
+              - Status: {{ item.stdout_lines[0] | default('Inconnu') }}
+              - Network Bridge: {{ item.stdout_lines[1] | default('Non trouvé') }}
+              - Agent QEMU: {{ 'Actif' if agent_status.results[my_index].rc == 0 else 'Inactif' }}
+              --------------------------------------------------
+          loop: "{{ vm_info.results }}"
+          loop_control:
+            label: "{{ item.item.name }}"
+            index_var: my_index
+
+    # ========================================================================
+    # == BLOC DE RÉPARATION (uniquement avec des commandes shell)
+    # ========================================================================
+    - name: "RÉPARATION | Isoler les VMs privées à réparer (celles sur vmbr1)"
+      when: action == 'fix'
+      ansible.builtin.set_fact:
+        private_vms_to_fix: "{{ vms | selectattr('bridge', 'equalto', 'vmbr1') | list }}"
+
+    - name: "RÉPARATION | Exécuter le processus de réparation"
+      when:
+        - action == 'fix'
+        - private_vms_to_fix is defined
+        - private_vms_to_fix | length > 0
+      block:
+        - ansible.builtin.debug:
+            msg: "Début de la réparation pour : {{ private_vms_to_fix | map(attribute='name') | join(', ') }}"
+
+        - name: "Étape 1/5 - Arrêter les VMs"
+          ansible.builtin.command: "qm stop {{ item.vmid }}"
+          loop: "{{ private_vms_to_fix }}"
+          loop_control: { label: "{{ item.name }}" }
+          changed_when: true
+          ignore_errors: true
+
+        - name: "Attente..."
+          ansible.builtin.pause:
+            seconds: 10
+
+        - name: "Étape 2/5 - Reconfigurer le pont réseau (confirmer vmbr1)"
+          ansible.builtin.command: "qm set {{ item.vmid }} --net0 virtio,bridge={{ item.bridge }}"
+          loop: "{{ private_vms_to_fix }}"
+          loop_control: { label: "{{ item.name }}" }
+          changed_when: true
+
+        - name: "Étape 3/5 - Redémarrer les VMs"
+          ansible.builtin.command: "qm start {{ item.vmid }}"
+          loop: "{{ private_vms_to_fix }}"
+          loop_control: { label: "{{ item.name }}" }
+          changed_when: true
+
+        - name: "Étape 4/5 - Configurer l'IP statique via l'agent"
+          ansible.builtin.command: "qm guest exec {{ item.vmid }} -- /bin/bash -c \"echo -e '{{ netplan_config }}' > /etc/netplan/50-cloud-init.yaml && netplan apply\""
+          vars:
+            netplan_config: |
+              network:
+                version: 2
+                ethernets:
+                  ens18:
+                    dhcp4: no
+                    addresses: [{{ item.ip }}]
+                    gateway4: {{ item.gateway }}
+                    nameservers:
+                      addresses: [1.1.1.1, 8.8.8.8]
+          loop: "{{ private_vms_to_fix }}"
+          loop_control: { label: "{{ item.name }}" }
+          retries: 24
+          delay: 5
+          until: result.rc == 0
+          register: result
+          changed_when: true
+
+        - name: "Étape 5/5 - Vérifier la connectivité finale"
+          ansible.builtin.command: "qm guest exec {{ item.vmid }} -- ping -c 3 {{ item.gateway }}"
+          loop: "{{ private_vms_to_fix }}"
+          loop_control: { label: "{{ item.name }}" }
+          changed_when: false
+          failed_when: false
+          register: ping_results
+
+        - name: "Afficher le rapport final"
+          ansible.builtin.debug:
+            msg: |
+              - VM {{ item.item.name }}: Ping vers {{ item.item.gateway }} -> {{ 'SUCCÈS' if item.rc == 0 else 'ÉCHEC' }}
+          loop: "{{ ping_results.results }}"
+          loop_control:
+            label: "{{ item.item.name }}"

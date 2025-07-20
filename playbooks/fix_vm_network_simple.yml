@@ -1,0 +1,62 @@
+---
+- name: Réparer le pont réseau des VMs (sans configuration IP)
+  hosts: proxmox_server
+  gather_facts: false
+  vars_files:
+    - ../secret_vars.yml
+    - ../vm_config.example.yml
+
+  tasks:
+    - name: Isoler les VMs privées (celles sur vmbr1)
+      ansible.builtin.set_fact:
+        private_vms_to_fix: "{{ vms | selectattr('bridge', 'equalto', 'vmbr1') | list }}"
+
+    - name: Afficher le plan
+      ansible.builtin.debug:
+        msg: "Reconfiguration du pont réseau pour : {{ private_vms_to_fix | map(attribute='name') | join(', ') }}"
+
+    - name: Étape 1/3 - Arrêter les VMs
+      ansible.builtin.command: "qm stop {{ item.vmid }}"
+      loop: "{{ private_vms_to_fix }}"
+      loop_control: { label: "{{ item.name }}" }
+      changed_when: true
+      ignore_errors: true
+
+    - name: Attendre l'arrêt
+      ansible.builtin.pause:
+        seconds: 10
+
+    - name: Étape 2/3 - Reconfigurer le pont réseau (vmbr1)
+      ansible.builtin.command: "qm set {{ item.vmid }} --net0 virtio,bridge=vmbr1"
+      loop: "{{ private_vms_to_fix }}"
+      loop_control: { label: "{{ item.name }}" }
+      changed_when: true
+
+    - name: Étape 3/3 - Redémarrer les VMs
+      ansible.builtin.command: "qm start {{ item.vmid }}"
+      loop: "{{ private_vms_to_fix }}"
+      loop_control: { label: "{{ item.name }}" }
+      changed_when: true
+
+    - name: Résumé
+      ansible.builtin.debug:
+        msg: |
+          =============================================
+          PONT RÉSEAU RECONFIGURÉ
+          =============================================
+          Les VMs sont maintenant sur le pont vmbr1.
+          
+          Pour configurer les IPs manuellement :
+          1. Connectez-vous : ssh root@167.235.118.227
+          2. Pour chaque VM :
+             - Frontend (802) : qm terminal 802
+             - Backend (803) : qm terminal 803  
+             - Database (804) : qm terminal 804
+          3. Dans chaque VM, configurez :
+             sudo nano /etc/netplan/50-cloud-init.yaml
+             
+          Configuration réseau à appliquer :
+          {% for vm in private_vms_to_fix %}
+          - {{ vm.name }} : {{ vm.ip }} (Gateway: {{ vm.gateway }})
+          {% endfor %}
+          ============================================= 
