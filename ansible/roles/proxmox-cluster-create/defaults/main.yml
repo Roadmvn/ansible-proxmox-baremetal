@@ -1,0 +1,32 @@
+---
+# ============================================
+# PROXMOX CLUSTER CREATION - DEFAULT VARIABLES
+# ============================================
+
+# Nom du cluster Proxmox
+cluster_name: "pve-cluster"
+
+# Réseau du cluster (par défaut: utilise l'interface de management)
+# Laissez vide pour utiliser l'IP principale de chaque nœud
+cluster_network: ""
+
+# Configuration du quorum
+# 2 nœuds = besoin de 2 votes pour quorum
+expected_votes: 2
+
+# Ports utilisés par le cluster
+corosync_port: 5405
+corosync_mcast_port: 5404
+pve_cluster_port: 5403
+
+# Timeout pour les opérations cluster (secondes)
+cluster_join_timeout: 120
+cluster_verification_timeout: 60
+
+# Options de vérification
+verify_network_connectivity: true
+verify_dns_resolution: true
+verify_proxmox_version: true
+
+# Redémarrage automatique des services si nécessaire
+restart_services_on_failure: true

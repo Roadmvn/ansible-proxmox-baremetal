@@ -1,0 +1,33 @@
+---
+# ============================================
+# VARIABLES PUBLIQUES - CLUSTER PROXMOX VE
+# ============================================
+# Variables non sensibles pour le cluster Proxmox
+#
+# Les variables sensibles sont dans vault.yml (crypté)
+# ============================================
+
+# Configuration SSH
+ansible_ssh_private_key_file: ~/.ssh/id_ed25519
+ansible_python_interpreter: /usr/bin/python3
+
+# Configuration du cluster
+cluster_name: pve-cluster
+cluster_network: ""
+
+# Timeouts (en secondes)
+cluster_join_timeout: 120
+cluster_verification_timeout: 60
+
+# Options de vérification
+verify_network_connectivity: true
+verify_dns_resolution: true
+verify_proxmox_version: true
+
+# Redémarrage automatique des services si nécessaire
+restart_services_on_failure: true
+
+# Configuration SSH du rôle proxmox-ssh-setup
+configure_sshd_for_cluster: true
+backup_ssh_config: true
+verify_ssh_key_present: true

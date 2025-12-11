@@ -1,0 +1,20 @@
+---
+galaxy_info:
+  author: Inter-Gestion IT Team
+  description: Ansible role for creating Proxmox VE cluster
+  license: MIT
+  min_ansible_version: 2.10
+
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - bullseye
+
+  galaxy_tags:
+    - proxmox
+    - cluster
+    - virtualization
+    - infrastructure
+
+dependencies: []

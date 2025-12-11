@@ -1,0 +1,19 @@
+# Inventaire - Installation Proxmox VE
+# Usage: make proxmox-install
+
+all:
+  children:
+    proxmox_install:
+      hosts:
+        pve1:
+          ansible_host: 46.224.30.198
+          hostname: pve1.localdomain
+        pve2:
+          ansible_host: 46.224.54.72
+          hostname: pve2.localdomain
+      vars:
+        ansible_user: root
+        ansible_ssh_private_key_file: ~/.ssh/id_ed25519
+        ansible_python_interpreter: /usr/bin/python3
+        proxmox_version: bookworm
+        postfix_config: "Local only"

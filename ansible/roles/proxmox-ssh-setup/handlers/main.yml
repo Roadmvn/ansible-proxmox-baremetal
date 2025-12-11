@@ -1,0 +1,9 @@
+---
+# ============================================
+# PROXMOX SSH SETUP - HANDLERS
+# ============================================
+
+- name: Reload SSH service
+  ansible.builtin.systemd:
+    name: sshd
+    state: reloaded

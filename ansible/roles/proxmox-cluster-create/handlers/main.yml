@@ -1,0 +1,27 @@
+---
+# ============================================
+# PROXMOX CLUSTER HANDLERS
+# ============================================
+
+- name: Restart corosync
+  ansible.builtin.systemd:
+    name: corosync
+    state: restarted
+  listen: "restart cluster services"
+
+- name: Restart pve-cluster
+  ansible.builtin.systemd:
+    name: pve-cluster
+    state: restarted
+  listen: "restart cluster services"
+
+- name: Reload corosync configuration
+  ansible.builtin.command: corosync-cfgtool -R
+  changed_when: true
+  listen: "reload corosync config"
+
+- name: Wait for cluster filesystem
+  ansible.builtin.wait_for:
+    path: /etc/pve/corosync.conf
+    timeout: 60
+  listen: "wait for cluster fs"

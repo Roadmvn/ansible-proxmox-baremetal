@@ -1,0 +1,7 @@
+# Secrets non versionnes
+**/secrets-patch.yml
+**/secret.yml
+
+# Fichiers temporaires
+*.bak
+*.tmp

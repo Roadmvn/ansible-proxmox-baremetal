@@ -1,0 +1,25 @@
+# ============================================
+# TERRAFORM VARIABLES VALUES
+# ============================================
+# Copy this file to terraform.tfvars and fill in your values
+# cp terraform.tfvars.example terraform.tfvars
+
+# S3 Configuration (AWS, MinIO, Wasabi, etc.)
+s3_endpoint   = "https://s3.your-provider.com"
+s3_region     = "your-region"
+s3_access_key = "your-s3-access-key"
+s3_secret_key = "your-s3-secret-key"
+
+# Bucket Configuration
+bucket_name        = "your-bucket-name"
+enable_versioning  = false
+
+# Optional: Restrict access to specific IPs
+# restrict_to_ips = ["1.2.3.4/32", "5.6.7.8/32"]
+
+# Additional tags
+tags = {
+  Owner       = "Inter-Gestion IT"
+  Environment = "Production"
+  CostCenter  = "Infrastructure"
+}

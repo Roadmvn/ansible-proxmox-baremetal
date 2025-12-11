@@ -1,0 +1,22 @@
+---
+# ============================================
+# PROXMOX SSH SETUP - VARIABLES PAR DEFAUT
+# ============================================
+
+# Clé SSH publique de contrôle Ansible (à définir dans group_vars ou inventory)
+ansible_control_ssh_key: ""
+
+# Chemin vers le fichier de clé publique locale (alternative)
+ansible_control_ssh_key_file: "{{ lookup('env', 'HOME') }}/.ssh/id_ed25519.pub"
+
+# Vérifier la présence de la clé avant de la configurer
+verify_ssh_key_present: true
+
+# Configurer sshd pour accepter les clés des deux emplacements
+configure_sshd_for_cluster: true
+
+# Créer une sauvegarde avant modification
+backup_ssh_config: true
+
+# Forcer la création du répertoire SSH même s'il existe
+force_ssh_directory_creation: false

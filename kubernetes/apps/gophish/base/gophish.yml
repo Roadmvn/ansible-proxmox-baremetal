@@ -1,0 +1,126 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gophish-pvc
+  namespace: gophish
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  storageClassName: local-path
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gophish
+  namespace: gophish
+  labels:
+    app: gophish
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gophish
+  template:
+    metadata:
+      labels:
+        app: gophish
+    spec:
+      initContainers:
+        - name: init-config
+          image: busybox:1.36
+          env:
+            - name: DB_HOST
+              value: "mysql"
+            - name: DB_PORT
+              value: "3306"
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: mysql-database
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: mysql-user
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: mysql-password
+          command:
+            - /bin/sh
+            - -c
+            - |
+              cat > /gophish/config.json <<EOF
+              {
+                "admin_server": {
+                  "listen_url": "0.0.0.0:3333",
+                  "use_tls": false,
+                  "trusted_origins": []
+                },
+                "phish_server": {
+                  "listen_url": "0.0.0.0:80",
+                  "use_tls": false
+                },
+                "db_name": "mysql",
+                "db_path": "${DB_USER}:${DB_PASS}@tcp(${DB_HOST}:${DB_PORT})/${DB_NAME}?charset=utf8&parseTime=True&loc=UTC",
+                "migrations_prefix": "db/db_",
+                "contact_address": "",
+                "logging": {
+                  "filename": "",
+                  "level": "info"
+                }
+              }
+              EOF
+          volumeMounts:
+            - name: gophish-config
+              mountPath: /gophish
+      containers:
+        - name: gophish
+          image: gophish/gophish:latest
+          command: ["/opt/gophish/gophish"]
+          ports:
+            - containerPort: 3333
+              name: admin
+            - containerPort: 80
+              name: phishing
+          volumeMounts:
+            - name: gophish-config
+              mountPath: /opt/gophish/config.json
+              subPath: config.json
+            - name: gophish-data
+              mountPath: /opt/gophish/static/endpoint
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+      volumes:
+        - name: gophish-config
+          emptyDir: {}
+        - name: gophish-data
+          persistentVolumeClaim:
+            claimName: gophish-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gophish
+  namespace: gophish
+spec:
+  selector:
+    app: gophish
+  ports:
+    - name: admin
+      port: 3333
+      targetPort: 3333
+    - name: phishing
+      port: 80
+      targetPort: 80
+  type: ClusterIP

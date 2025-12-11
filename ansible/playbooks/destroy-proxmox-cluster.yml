@@ -1,0 +1,105 @@
+---
+# ============================================
+# PLAYBOOK: DESTRUCTION CLUSTER PROXMOX VE
+# ============================================
+# Ce playbook détruit un cluster Proxmox VE existant
+#
+# ATTENTION: Cette opération est destructive !
+#
+# Utilisation:
+#   ansible-playbook -i inventory/proxmox-cluster.ini playbooks/destroy-proxmox-cluster.yml
+#
+# ============================================
+
+- name: Destruction du cluster Proxmox VE sur tous les nœuds
+  hosts: proxmox_cluster
+  gather_facts: true
+  become: true
+  serial: 1
+
+  tasks:
+    - name: Afficher avertissement
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "DESTRUCTION DU CLUSTER PROXMOX VE"
+          - "=========================================="
+          - "Nœud: {{ inventory_hostname }}"
+          - "IP: {{ ansible_host }}"
+          - "ATTENTION: Cette opération est destructive !"
+          - "=========================================="
+
+    - name: Pause pour confirmation
+      ansible.builtin.pause:
+        seconds: 3
+        prompt: "Destruction du cluster sur {{ inventory_hostname }} dans 3 secondes..."
+
+    - name: Sauvegarder la configuration actuelle
+      ansible.builtin.command: cp -r /etc/pve /root/pve-backup-{{ ansible_date_time.date }}
+      failed_when: false
+      changed_when: true
+
+    - name: Arrêter corosync
+      ansible.builtin.systemd:
+        name: corosync
+        state: stopped
+      failed_when: false
+
+    - name: Arrêter pve-cluster
+      ansible.builtin.systemd:
+        name: pve-cluster
+        state: stopped
+
+    - name: Supprimer la base de données pmxcfs
+      ansible.builtin.file:
+        path: /var/lib/pve-cluster/config.db
+        state: absent
+      failed_when: false
+
+    - name: Supprimer la configuration Corosync
+      ansible.builtin.file:
+        path: /etc/corosync/corosync.conf
+        state: absent
+      failed_when: false
+
+    - name: Nettoyer le contenu de /var/lib/corosync (conserver le répertoire)
+      ansible.builtin.shell: |
+        if [ -d /var/lib/corosync ]; then
+          rm -rf /var/lib/corosync/*
+        fi
+      args:
+        executable: /bin/bash
+      failed_when: false
+      changed_when: false
+
+    - name: S'assurer que /var/lib/corosync existe avec les bonnes permissions
+      ansible.builtin.file:
+        path: /var/lib/corosync
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+
+    - name: Redémarrer le service pve-cluster
+      ansible.builtin.systemd:
+        name: pve-cluster
+        state: started
+
+    - name: Attendre que pve-cluster soit prêt
+      ansible.builtin.pause:
+        seconds: 5
+
+    - name: Vérifier que le cluster est bien supprimé
+      ansible.builtin.command: pvecm status
+      register: cluster_status_check
+      failed_when: false
+      changed_when: false
+
+    - name: Afficher le résultat
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "Cluster détruit sur {{ inventory_hostname }}"
+          - "Le nœud est maintenant standalone"
+          - "=========================================="
+      when: cluster_status_check.rc != 0

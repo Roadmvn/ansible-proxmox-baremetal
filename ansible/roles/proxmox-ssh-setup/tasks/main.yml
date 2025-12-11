@@ -1,0 +1,203 @@
+---
+# ============================================
+# PROXMOX SSH SETUP - CONFIGURATION INTELLIGENTE
+# ============================================
+# Gère SSH en respectant l'architecture Proxmox:
+# - Mode standalone: /root/.ssh est un répertoire normal
+# - Mode cluster: /root/.ssh -> /etc/pve/priv/ (symlink)
+# ============================================
+
+# ============================================
+# 1. DETECTION DU MODE (STANDALONE vs CLUSTER)
+# ============================================
+
+- name: Vérifier si un cluster Proxmox existe
+  ansible.builtin.stat:
+    path: /etc/pve/corosync.conf
+  register: proxmox_cluster_status
+
+- name: Déterminer le mode d'opération
+  ansible.builtin.set_fact:
+    proxmox_is_clustered: "{{ proxmox_cluster_status.stat.exists }}"
+
+- name: Afficher le mode détecté
+  ansible.builtin.debug:
+    msg: "Mode détecté: {{ 'CLUSTER' if proxmox_is_clustered else 'STANDALONE' }}"
+
+# ============================================
+# 2. LECTURE DE LA CLE SSH DE CONTROLE
+# ============================================
+
+- name: Vérifier si la clé SSH est fournie directement
+  ansible.builtin.set_fact:
+    ssh_key_provided: "{{ ansible_control_ssh_key | length > 0 }}"
+
+- name: Lire la clé SSH depuis le fichier si non fournie
+  when: not ssh_key_provided
+  block:
+    - name: Vérifier l'existence du fichier de clé SSH
+      ansible.builtin.stat:
+        path: "{{ ansible_control_ssh_key_file }}"
+      delegate_to: localhost
+      become: false
+      register: ssh_key_file_check
+
+    - name: Lire le contenu de la clé SSH
+      ansible.builtin.slurp:
+        src: "{{ ansible_control_ssh_key_file }}"
+      delegate_to: localhost
+      become: false
+      register: ssh_key_content
+      when: ssh_key_file_check.stat.exists
+
+    - name: Définir la clé SSH depuis le fichier
+      ansible.builtin.set_fact:
+        ansible_control_ssh_key: "{{ ssh_key_content.content | b64decode | trim }}"
+      when: ssh_key_file_check.stat.exists
+
+    - name: Échec si aucune clé SSH n'est disponible
+      ansible.builtin.fail:
+        msg: |
+          Aucune clé SSH de contrôle disponible !
+          Définissez 'ansible_control_ssh_key' ou assurez-vous que le fichier existe:
+          {{ ansible_control_ssh_key_file }}
+      when:
+        - verify_ssh_key_present
+        - not ssh_key_file_check.stat.exists
+
+# ============================================
+# 3. CONFIGURATION SSH - MODE STANDALONE
+# ============================================
+
+- name: Configuration SSH en mode standalone
+  when: not proxmox_is_clustered
+  block:
+    - name: Vérifier le type de /root/.ssh
+      ansible.builtin.stat:
+        path: /root/.ssh
+      register: ssh_dir_stat
+
+    - name: Créer /root/.ssh si inexistant
+      ansible.builtin.file:
+        path: /root/.ssh
+        state: directory
+        mode: '0700'
+        owner: root
+        group: root
+      when: not ssh_dir_stat.stat.exists
+
+    - name: Ajouter la clé SSH de contrôle (standalone)
+      ansible.posix.authorized_key:
+        user: root
+        state: present
+        key: "{{ ansible_control_ssh_key }}"
+        path: /root/.ssh/authorized_keys
+        manage_dir: true
+      when: ansible_control_ssh_key | length > 0
+
+# ============================================
+# 4. CONFIGURATION SSH - MODE CLUSTER
+# ============================================
+
+- name: Configuration SSH en mode cluster
+  when: proxmox_is_clustered
+  block:
+    - name: Vérifier le type de /root/.ssh
+      ansible.builtin.stat:
+        path: /root/.ssh
+      register: ssh_dir_stat_cluster
+
+    - name: Information sur le mode cluster
+      ansible.builtin.debug:
+        msg:
+          - "Mode CLUSTER détecté"
+          - "/root/.ssh devrait être un symlink vers /etc/pve/priv/"
+          - "Type actuel: {{ 'symlink' if ssh_dir_stat_cluster.stat.islnk else 'directory' if ssh_dir_stat_cluster.stat.isdir else 'inexistant' }}"
+
+    # En mode cluster, /root/.ssh est un symlink vers /etc/pve/priv/
+    # On doit ajouter la clé dans /etc/pve/priv/authorized_keys
+
+    - name: S'assurer que /etc/pve/priv existe
+      ansible.builtin.file:
+        path: /etc/pve/priv
+        state: directory
+        mode: '0700'
+        owner: root
+        group: www-data
+
+    - name: Ajouter la clé SSH de contrôle dans /etc/pve/priv/authorized_keys
+      ansible.posix.authorized_key:
+        user: root
+        state: present
+        key: "{{ ansible_control_ssh_key }}"
+        path: /etc/pve/priv/authorized_keys
+        manage_dir: false
+      when: ansible_control_ssh_key | length > 0
+
+    - name: S'assurer que le symlink /root/.ssh existe
+      ansible.builtin.file:
+        src: /etc/pve/priv
+        dest: /root/.ssh
+        state: link
+        force: true
+      when: not ssh_dir_stat_cluster.stat.exists or not ssh_dir_stat_cluster.stat.islnk
+
+# ============================================
+# 5. CONFIGURATION SSHD (OPTIONNEL)
+# ============================================
+
+- name: Configuration SSH pour supporter les deux emplacements
+  when: configure_sshd_for_cluster
+  block:
+    - name: Vérifier la configuration SSH actuelle
+      ansible.builtin.slurp:
+        src: /etc/ssh/sshd_config
+      register: sshd_config_current
+
+    - name: Sauvegarder la configuration SSH
+      ansible.builtin.copy:
+        src: /etc/ssh/sshd_config
+        dest: /etc/ssh/sshd_config.backup-{{ ansible_date_time.date }}
+        remote_src: true
+        mode: '0600'
+      when:
+        - backup_ssh_config
+        - "'AuthorizedKeysFile' not in (sshd_config_current.content | b64decode)"
+
+    - name: Configurer AuthorizedKeysFile pour supporter cluster et standalone
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?AuthorizedKeysFile'
+        line: 'AuthorizedKeysFile .ssh/authorized_keys /etc/pve/priv/authorized_keys'
+        backup: true
+      notify: Reload SSH service
+      register: sshd_config_changed
+
+# ============================================
+# 6. VERIFICATION FINALE
+# ============================================
+
+- name: Vérifications finales
+  block:
+    - name: Vérifier que la clé est bien présente
+      ansible.builtin.command: >
+        grep -F "{{ ansible_control_ssh_key.split()[1][:30] }}"
+        {{ '/etc/pve/priv/authorized_keys' if proxmox_is_clustered else '/root/.ssh/authorized_keys' }}
+      register: key_verification
+      changed_when: false
+      failed_when: false
+
+    - name: Afficher le résultat de la vérification
+      ansible.builtin.debug:
+        msg: "{{ 'Clé SSH de contrôle présente ✓' if key_verification.rc == 0 else 'ATTENTION: Clé SSH non trouvée ✗' }}"
+
+    - name: Afficher les informations de configuration
+      ansible.builtin.debug:
+        msg:
+          - "==========================================="
+          - "CONFIGURATION SSH PROXMOX COMPLETEE"
+          - "==========================================="
+          - "Mode: {{ 'CLUSTER' if proxmox_is_clustered else 'STANDALONE' }}"
+          - "Fichier authorized_keys: {{ '/etc/pve/priv/authorized_keys' if proxmox_is_clustered else '/root/.ssh/authorized_keys' }}"
+          - "Configuration sshd: {{ 'Modifiée' if sshd_config_changed is defined and sshd_config_changed.changed else 'Inchangée' }}"
+          - "==========================================="

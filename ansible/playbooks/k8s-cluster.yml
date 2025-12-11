@@ -1,0 +1,10 @@
+---
+# Deploiement cluster Kubernetes via Kubespray
+# Usage: make k8s-cluster ENV=production
+#
+# Prerequis:
+#   - make k8s-setup (clone Kubespray)
+#   - Configurer inventory/kubernetes/production/hosts.yml
+
+- name: Deploy Kubernetes cluster with Kubespray
+  import_playbook: ../vendor/kubespray/cluster.yml

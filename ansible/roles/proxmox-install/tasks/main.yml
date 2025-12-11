@@ -1,0 +1,104 @@
+---
+# ============================================
+# Rôle : proxmox-install
+# Description : Installation de Proxmox VE sur Debian 12 Bookworm
+# ============================================
+
+- name: Vérifier que le système est Debian
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "Debian"
+    fail_msg: "Ce playbook nécessite Debian"
+    success_msg: "Système détecté : {{ ansible_distribution }} {{ ansible_distribution_version }}"
+
+- name: Avertissement si Debian version différente de 12
+  ansible.builtin.debug:
+    msg:
+      - "⚠️  AVERTISSEMENT : Votre système est Debian {{ ansible_distribution_major_version }}"
+      - "⚠️  Proxmox VE 8.x est officiellement conçu pour Debian 12 (Bookworm)"
+      - "⚠️  L'installation peut fonctionner mais n'est pas officiellement supportée"
+  when: ansible_distribution_major_version != "12"
+
+- name: Configurer le hostname
+  ansible.builtin.hostname:
+    name: "{{ hostname }}"
+  notify: Redémarrer le système
+
+- name: Configurer /etc/hosts
+  ansible.builtin.template:
+    src: hosts.j2
+    dest: /etc/hosts
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Redémarrer le système
+
+- name: Télécharger la clé GPG Proxmox
+  ansible.builtin.get_url:
+    url: https://enterprise.proxmox.com/debian/proxmox-release-bookworm.gpg
+    dest: /etc/apt/trusted.gpg.d/proxmox-release-bookworm.gpg
+    mode: '0644'
+
+- name: Ajouter le repository Proxmox
+  ansible.builtin.apt_repository:
+    repo: "deb [arch=amd64] http://download.proxmox.com/debian/pve {{ proxmox_version }} pve-no-subscription"
+    state: present
+    filename: pve-install-repo
+    update_cache: no
+
+- name: Mettre à jour le cache APT
+  ansible.builtin.apt:
+    update_cache: yes
+    cache_valid_time: 0
+
+- name: Effectuer une mise à jour complète du système
+  ansible.builtin.apt:
+    upgrade: full
+    autoremove: yes
+    autoclean: yes
+  register: apt_upgrade
+
+- name: Configurer timeout DHCPv6 court pour éviter les blocages
+  ansible.builtin.copy:
+    content: |
+      # Configuration DHCPv6 - Timeout court pour éviter les blocages
+      timeout 10;
+    dest: /etc/dhcp/dhclient.conf
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Installer Proxmox VE et dépendances
+  ansible.builtin.apt:
+    name:
+      - proxmox-ve
+      - postfix
+      - open-iscsi
+      - chrony
+    state: present
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+  register: proxmox_install
+
+- name: Afficher le résultat de l'installation
+  ansible.builtin.debug:
+    msg:
+      - "Installation Proxmox VE terminée avec succès"
+      - "Hostname: {{ hostname }}"
+      - "IP: {{ ansible_host }}"
+      - "Interface web: https://{{ ansible_host }}:8006"
+      - "Login: root"
+      - "Un redémarrage est nécessaire pour terminer l'installation"
+
+- name: Créer le fichier de statut d'installation
+  ansible.builtin.copy:
+    content: |
+      Installation Proxmox VE
+      Date: {{ ansible_date_time.iso8601 }}
+      Hostname: {{ hostname }}
+      IP: {{ ansible_host }}
+      Version Proxmox: {{ proxmox_version }}
+    dest: /root/proxmox-installation-status.txt
+    owner: root
+    group: root
+    mode: '0644'

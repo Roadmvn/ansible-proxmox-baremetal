@@ -1,0 +1,24 @@
+---
+# ============================================
+# Métadonnées - proxmox-install
+# ============================================
+
+galaxy_info:
+  author: Inter-Gestion IT Team
+  description: Installation de Proxmox VE sur Debian 12 Bookworm
+  company: Inter-Gestion
+  license: MIT
+  min_ansible_version: "2.10"
+
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+
+  galaxy_tags:
+    - proxmox
+    - virtualization
+    - debian
+    - infrastructure
+
+dependencies: []

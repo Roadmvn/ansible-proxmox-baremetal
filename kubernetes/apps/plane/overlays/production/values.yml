@@ -1,0 +1,22 @@
+# Plane Helm Values - Production
+# Doc: https://github.com/makeplane/plane
+
+planeVersion: v1.1.0
+
+ingress:
+  appHost: plane.example.com
+  ingressClass: nginx
+
+# Stockage
+postgres:
+  storageClass: local-path
+redis:
+  storageClass: local-path
+minio:
+  storageClass: local-path
+rabbitmq:
+  storageClass: local-path
+
+# Environnement
+env:
+  default_cluster_domain: cluster.local

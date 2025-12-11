@@ -1,0 +1,84 @@
+---
+# ============================================
+# GLOBAL VARIABLES
+# ============================================
+# Copy this file to all.yml and fill in your values
+# cp all.yml.example all.yml
+
+# S3 Configuration (AWS, MinIO, Wasabi, etc.)
+s3_access_key: "your-s3-access-key"
+s3_secret_key: "your-s3-secret-key"
+s3_endpoint: "https://s3.your-provider.com"
+s3_bucket: "your-bucket-name"
+s3_region: "your-region"
+
+# Kopia Configuration
+kopia_password: "CHANGE_ME_STRONG_PASSWORD"
+kopia_cache_size: "10GB"
+kopia_compression: "zstd"
+kopia_encryption: "AES256-GCM-HMAC-SHA256"
+kopia_parallel_uploads: 8
+
+# Backup Configuration
+backup_mode: "all"  # all | selective | exclude
+backup_vms: true
+backup_containers: true
+backup_cluster_config: true
+backup_mode_type: "snapshot"
+backup_compression: "zstd"
+
+# Scheduling
+backup_hour: "2"
+backup_frequency: "daily"  # daily | every2days
+
+# Retention Policy
+kopia_keep_latest: 3
+kopia_keep_daily: 7
+kopia_keep_weekly: 4
+kopia_keep_monthly: 3
+kopia_keep_annual: 0
+
+# SMTP Configuration
+smtp_enabled: true
+smtp_host: "smtp.example.com"
+smtp_port: "587"
+smtp_user: "infrastructure@inter-gestion.com"
+smtp_password: "CHANGE_ME"
+smtp_from: "infrastructure@inter-gestion.com"
+smtp_to: "infrastructure@inter-gestion.com"
+smtp_use_tls: true
+notify_on_success: true
+notify_on_error: true
+
+# Logging
+log_level: "INFO"
+log_to_file: true
+log_dir: "/var/log/proxmox-backup"
+log_retention_days: 30
+
+# Syslog (for OpenSearch)
+syslog_enabled: false
+syslog_server: ""
+syslog_port: "514"
+
+# Storage
+temp_backup_dir: "/var/tmp/proxmox-backup"
+cleanup_temp: true
+min_free_space_percent: 20
+
+# Advanced
+parallel_backups: 1
+bandwidth_limit: ""
+retry_count: 3
+retry_delay: 300
+checksum_verification: true
+
+# Maintenance
+kopia_maintenance_schedule: "weekly"
+kopia_maintenance_day: 0  # 0=Sunday
+kopia_maintenance_hour: 3
+
+# Verification
+kopia_verify_schedule: "weekly"
+kopia_verify_percent: 10
+kopia_verify_day: 0

@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: plane
+
+resources:
+  - ../../base
+
+# Note: Plane utilise Helm, pas Kustomize directement
+# Deployer avec:
+#   helm repo add makeplane https://helm.plane.so
+#   helm install plane makeplane/plane-ce -n plane -f values.yml

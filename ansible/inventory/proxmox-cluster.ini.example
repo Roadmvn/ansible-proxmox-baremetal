@@ -1,0 +1,31 @@
+# ============================================
+# INVENTAIRE PROXMOX CLUSTER - EXEMPLE
+# ============================================
+# Copier ce fichier et adapter avec vos valeurs :
+#
+# cp inventory/proxmox-cluster.ini.example inventory/proxmox-cluster.ini
+# vi inventory/proxmox-cluster.ini
+#
+# ============================================
+
+# Nœud primaire du cluster (celui qui crée le cluster)
+[proxmox_cluster_primary]
+pve1 ansible_host=YOUR_SERVER_1_IP ansible_user=root hostname=pve1.localdomain ansible_password=YOUR_ROOT_PASSWORD
+
+# Nœuds secondaires (ceux qui rejoignent le cluster)
+[proxmox_cluster_nodes]
+pve2 ansible_host=YOUR_SERVER_2_IP ansible_user=root hostname=pve2.localdomain ansible_password=YOUR_ROOT_PASSWORD
+# pve3 ansible_host=YOUR_SERVER_3_IP ansible_user=root hostname=pve3.localdomain ansible_password=YOUR_ROOT_PASSWORD
+
+# Groupe parent contenant tous les nœuds du cluster
+[proxmox_cluster:children]
+proxmox_cluster_primary
+proxmox_cluster_nodes
+
+# Variables communes à tous les nœuds du cluster
+[proxmox_cluster:vars]
+# Clé SSH privée pour connexion (sera remplacée par clés générées automatiquement)
+ansible_ssh_private_key_file=~/.ssh/id_ed25519
+
+# Nom du cluster Proxmox
+cluster_name=pve-cluster

@@ -1,0 +1,219 @@
+---
+# ============================================
+# PROXMOX CLUSTER CREATION - MAIN TASKS
+# ============================================
+
+# ============================================
+# 1. VERIFICATIONS PREALABLES
+# ============================================
+
+- name: Vérifier que Proxmox VE est installé
+  ansible.builtin.command: pveversion
+  register: pve_version_check
+  changed_when: false
+  failed_when: pve_version_check.rc != 0
+
+- name: Afficher la version Proxmox VE détectée
+  ansible.builtin.debug:
+    msg: "Proxmox VE version: {{ pve_version_check.stdout }}"
+
+- name: Vérifier que le service pve-cluster existe
+  ansible.builtin.systemd:
+    name: pve-cluster
+  register: pve_cluster_service
+  check_mode: true
+
+- name: Vérifier la connectivité réseau entre les nœuds
+  ansible.builtin.wait_for:
+    host: "{{ hostvars[item]['ansible_host'] }}"
+    port: 22
+    timeout: 10
+  loop: "{{ groups['proxmox_cluster'] | default(groups['proxmox_cluster_nodes'] + groups['proxmox_cluster_primary']) }}"
+  when:
+    - verify_network_connectivity | default(true)
+    - item != inventory_hostname
+
+- name: Vérifier si un cluster existe déjà sur ce nœud
+  ansible.builtin.stat:
+    path: /etc/pve/corosync.conf
+  register: existing_cluster_config
+
+- name: Afficher avertissement si cluster existe déjà
+  ansible.builtin.debug:
+    msg: "ATTENTION: Un cluster existe déjà sur {{ inventory_hostname }}"
+  when: existing_cluster_config.stat.exists
+
+# ============================================
+# 2. CREATION DU CLUSTER (NŒUD PRIMAIRE UNIQUEMENT)
+# ============================================
+
+- name: Créer le cluster Proxmox VE (nœud primaire)
+  when:
+    - inventory_hostname in groups['proxmox_cluster_primary']
+    - not existing_cluster_config.stat.exists
+  block:
+    - name: Créer le cluster avec pvecm
+      ansible.builtin.command: >
+        pvecm create {{ cluster_name }}
+        {% if cluster_network %} --link0 {{ cluster_network }}{% endif %}
+      register: cluster_creation
+      changed_when: cluster_creation.rc == 0
+      failed_when:
+        - cluster_creation.rc != 0
+        - '"already part of a cluster" not in cluster_creation.stderr'
+
+    - name: Attendre que le cluster filesystem soit prêt
+      ansible.builtin.wait_for:
+        path: /etc/pve/corosync.conf
+        timeout: "{{ cluster_verification_timeout }}"
+
+    - name: Redémarrer le service Corosync
+      ansible.builtin.systemd:
+        name: corosync
+        state: restarted
+        enabled: true
+
+    - name: Attendre que Corosync soit prêt
+      ansible.builtin.pause:
+        seconds: 5
+
+    - name: Vérifier la création du cluster
+      ansible.builtin.command: pvecm status
+      register: cluster_status_primary
+      changed_when: false
+      retries: 6
+      delay: 5
+      until: cluster_status_primary.rc == 0
+
+    - name: Afficher le statut du cluster créé
+      ansible.builtin.debug:
+        msg: "{{ cluster_status_primary.stdout_lines }}"
+
+    - name: Attendre que les services cluster soient stables
+      ansible.builtin.pause:
+        seconds: 10
+        prompt: "Attente de la stabilisation du cluster primaire"
+
+# ============================================
+# 3. JONCTION AU CLUSTER (NŒUDS SECONDAIRES)
+# ============================================
+
+- name: Joindre le cluster (nœuds secondaires)
+  when:
+    - inventory_hostname in groups['proxmox_cluster_nodes']
+    - not existing_cluster_config.stat.exists
+  block:
+    - name: Obtenir l'IP du nœud primaire
+      ansible.builtin.set_fact:
+        primary_node_ip: "{{ hostvars[groups['proxmox_cluster_primary'][0]]['ansible_host'] }}"
+
+    - name: Afficher le nœud primaire à rejoindre
+      ansible.builtin.debug:
+        msg: "Jonction au cluster via le nœud primaire: {{ primary_node_ip }}"
+
+    - name: Joindre le cluster avec pvecm add
+      ansible.builtin.command: >
+        pvecm add {{ primary_node_ip }}
+        --use_ssh
+      register: cluster_join
+      changed_when: cluster_join.rc == 0
+      failed_when:
+        - cluster_join.rc != 0
+        - '"already part of a cluster" not in cluster_join.stderr'
+      timeout: "{{ cluster_join_timeout }}"
+
+    - name: Attendre que la configuration cluster soit synchronisée
+      ansible.builtin.wait_for:
+        path: /etc/pve/corosync.conf
+        timeout: "{{ cluster_verification_timeout }}"
+
+    - name: Vérifier la jonction au cluster
+      ansible.builtin.command: pvecm status
+      register: cluster_status_node
+      changed_when: false
+      failed_when: cluster_status_node.rc != 0
+      retries: 3
+      delay: 5
+      until: cluster_status_node.rc == 0
+
+    - name: Afficher le statut du cluster après jonction
+      ansible.builtin.debug:
+        msg: "{{ cluster_status_node.stdout_lines }}"
+
+# ============================================
+# 4. VERIFICATIONS POST-CREATION
+# ============================================
+
+- name: Vérifications finales du cluster
+  when: existing_cluster_config.stat.exists or cluster_creation is defined or cluster_join is defined
+  block:
+    - name: Vérifier le statut du cluster
+      ansible.builtin.command: pvecm status
+      register: final_cluster_status
+      changed_when: false
+
+    - name: Vérifier la liste des nœuds du cluster
+      ansible.builtin.command: pvecm nodes
+      register: cluster_nodes_list
+      changed_when: false
+
+    - name: Vérifier le statut de corosync
+      ansible.builtin.command: corosync-cfgtool -s
+      register: corosync_status
+      changed_when: false
+
+    - name: Afficher les informations du cluster
+      ansible.builtin.debug:
+        msg:
+          - "=== STATUT DU CLUSTER ==="
+          - "{{ final_cluster_status.stdout_lines }}"
+          - "=== NŒUDS DU CLUSTER ==="
+          - "{{ cluster_nodes_list.stdout_lines }}"
+          - "=== STATUT COROSYNC ==="
+          - "{{ corosync_status.stdout_lines }}"
+
+    - name: Vérifier que le quorum est atteint
+      ansible.builtin.command: pvecm status
+      register: quorum_check
+      changed_when: false
+      failed_when: quorum_check.stdout is not search('Quorate:\s+Yes')
+
+    - name: Vérifier la synchronisation du cluster filesystem
+      ansible.builtin.stat:
+        path: "/etc/pve/nodes"
+      register: cluster_nodes_dir
+
+    - name: Lister les nœuds dans /etc/pve/nodes
+      ansible.builtin.command: ls -la /etc/pve/nodes/
+      register: pve_nodes_content
+      changed_when: false
+
+    - name: Afficher les nœuds synchronisés
+      ansible.builtin.debug:
+        msg: "{{ pve_nodes_content.stdout_lines }}"
+
+# ============================================
+# 5. CONFIGURATION POST-CLUSTER
+# ============================================
+
+- name: S'assurer que les services cluster sont activés
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - corosync
+    - pve-cluster
+    - pvedaemon
+    - pveproxy
+
+- name: Afficher message de succès
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "CLUSTER PROXMOX VE CREE AVEC SUCCES"
+      - "=========================================="
+      - "Nom du cluster: {{ cluster_name }}"
+      - "Nœud actuel: {{ inventory_hostname }}"
+      - "Accès Web: https://{{ ansible_host }}:8006"
+      - "=========================================="

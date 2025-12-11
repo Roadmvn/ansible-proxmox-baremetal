@@ -1,0 +1,8 @@
+---
+# Upgrader le cluster Kubernetes
+# Usage: make k8s-upgrade ENV=production
+#
+# Modifier kube_version dans group_vars avant execution
+
+- name: Upgrade Kubernetes cluster
+  import_playbook: ../vendor/kubespray/upgrade-cluster.yml

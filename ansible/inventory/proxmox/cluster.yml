@@ -1,0 +1,28 @@
+# Inventaire - Cluster Proxmox VE
+# Usage: make proxmox-cluster
+
+all:
+  children:
+    # Noeud primaire (cree le cluster)
+    proxmox_cluster_primary:
+      hosts:
+        pve1:
+          ansible_host: 46.224.30.198
+          hostname: pve1.localdomain
+
+    # Noeuds secondaires (rejoignent le cluster)
+    proxmox_cluster_nodes:
+      hosts:
+        pve2:
+          ansible_host: 46.224.54.72
+          hostname: pve2.localdomain
+
+    # Groupe parent
+    proxmox_cluster:
+      children:
+        proxmox_cluster_primary:
+        proxmox_cluster_nodes:
+      vars:
+        ansible_user: root
+        ansible_ssh_private_key_file: ~/.ssh/id_ed25519
+        cluster_name: pve-cluster

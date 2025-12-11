@@ -1,0 +1,8 @@
+---
+# Detruire le cluster Kubernetes
+# Usage: make k8s-reset ENV=production
+#
+# ATTENTION: Cette action est irreversible !
+
+- name: Reset Kubernetes cluster
+  import_playbook: ../vendor/kubespray/reset.yml

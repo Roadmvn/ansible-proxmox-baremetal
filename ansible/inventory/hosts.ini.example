@@ -1,0 +1,20 @@
+# ============================================
+# PROXMOX CLUSTER INVENTORY
+# ============================================
+# Copy this file to hosts.ini and fill in your values
+# cp hosts.ini.example hosts.ini
+
+[proxmox_cluster]
+node1 ansible_host=10.0.0.1 ansible_user=root node_name=node1 config_backup_offset=0
+node2 ansible_host=10.0.0.2 ansible_user=root node_name=node2 config_backup_offset=20
+node3 ansible_host=10.0.0.3 ansible_user=root node_name=node3 config_backup_offset=40
+
+[proxmox_cluster:vars]
+# SSH Configuration
+ansible_ssh_private_key_file=~/.ssh/id_rsa
+ansible_python_interpreter=/usr/bin/python3
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+
+# Base configuration
+base_dir=/opt/script_IG
+repo_url=https://github.com/your-org/script_IG.git

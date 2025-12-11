@@ -1,0 +1,30 @@
+---
+# ============================================
+# PROXMOX SSH SETUP - METADATA
+# ============================================
+
+galaxy_info:
+  role_name: proxmox_ssh_setup
+  author: Inter-Gestion Infrastructure Team
+  description: Configuration intelligente de SSH pour Proxmox VE (standalone et cluster)
+  company: Inter-Gestion
+  license: MIT
+  min_ansible_version: "2.10"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - bullseye
+
+  galaxy_tags:
+    - proxmox
+    - ssh
+    - cluster
+    - infrastructure
+
+dependencies: []
+
+# Notes de conception:
+# Ce rôle gère SSH de manière intelligente selon le mode:
+# - Standalone: Utilise /root/.ssh/authorized_keys normalement
+# - Cluster: Respecte le symlink vers /etc/pve/priv/ et configure SSH pour les deux emplacements

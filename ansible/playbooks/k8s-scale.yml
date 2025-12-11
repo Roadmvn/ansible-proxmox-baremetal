@@ -1,0 +1,9 @@
+---
+# Ajouter des nodes au cluster Kubernetes
+# Usage: make k8s-scale ENV=production
+#
+# 1. Ajouter les nouveaux nodes dans inventory/kubernetes/production/hosts.yml
+# 2. Executer ce playbook
+
+- name: Scale Kubernetes cluster
+  import_playbook: ../vendor/kubespray/scale.yml

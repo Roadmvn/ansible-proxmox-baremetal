@@ -1,0 +1,14 @@
+---
+# ============================================
+# Handlers pour proxmox-install
+# ============================================
+
+- name: Redémarrer le système
+  ansible.builtin.reboot:
+    msg: "Redémarrage du système après installation Proxmox VE"
+    connect_timeout: 5
+    reboot_timeout: 600
+    pre_reboot_delay: 0
+    post_reboot_delay: 30
+    test_command: uptime
+  when: reboot_after_install | default(true)

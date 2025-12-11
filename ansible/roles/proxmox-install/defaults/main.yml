@@ -1,0 +1,16 @@
+---
+# ============================================
+# Variables par défaut - proxmox-install
+# ============================================
+
+# Version Proxmox (debian codename)
+proxmox_version: bookworm
+
+# Configuration Postfix
+postfix_config: "Local only"
+
+# Redémarrage automatique après installation
+reboot_after_install: true
+
+# Hostname (doit être défini dans l'inventaire)
+# hostname: pve1.localdomain

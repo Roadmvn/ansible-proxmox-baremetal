@@ -1,0 +1,10 @@
+# Variables globales Kubernetes
+
+# Utilisateur Ansible
+ansible_user: root
+ansible_become: true
+
+# Proxy (si necessaire)
+# http_proxy: ""
+# https_proxy: ""
+# no_proxy: "localhost,127.0.0.1"

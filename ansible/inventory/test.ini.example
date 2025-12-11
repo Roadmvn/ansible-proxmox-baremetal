@@ -1,0 +1,17 @@
+# ============================================
+# INVENTAIRE TEST - 1 NŒUD
+# ============================================
+# Pour tester le déploiement sur un seul nœud
+
+[proxmox_test]
+node1 ansible_host=VOTRE_IP_TEST ansible_user=root node_name=node1 config_backup_offset=0
+
+[proxmox_test:vars]
+ansible_ssh_private_key_file=~/.ssh/id_rsa
+ansible_python_interpreter=/usr/bin/python3
+base_dir=/opt/ig-infra-as-code
+
+# Utilisation :
+# ansible-playbook -i inventory/test.ini playbook.yml
+# OU
+# make deploy-test
