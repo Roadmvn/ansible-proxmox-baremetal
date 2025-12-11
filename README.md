@@ -5,7 +5,7 @@ Automatisation complete : Proxmox + Kubernetes + Applications.
 ## Structure
 
 ```
-ig-infra-as-code/
+ansible-proxmox-baremetal/
 ├── ansible/          # Proxmox + Kubernetes (Kubespray)
 ├── terraform/        # Infrastructure S3
 └── kubernetes/       # Applications K8s (manifests)
@@ -88,6 +88,10 @@ nano kubernetes/apps/gophish/overlays/production/ingress.yml
 - Terraform >= 1.0
 - Python 3
 - Acces SSH root aux serveurs
+
+## Auteur
+
+Roadmvn
 
 ## Licence
 

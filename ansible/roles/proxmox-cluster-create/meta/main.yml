@@ -1,6 +1,6 @@
 ---
 galaxy_info:
-  author: Inter-Gestion IT Team
+  author: Community
   description: Ansible role for creating Proxmox VE cluster
   license: MIT
   min_ansible_version: 2.10

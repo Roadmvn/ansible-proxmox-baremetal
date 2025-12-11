@@ -91,10 +91,10 @@ Exemple de configuration :
 
 ```ini
 [proxmox_cluster_primary]
-pve1 ansible_host=46.224.30.198 ansible_user=root hostname=pve1.localdomain
+pve1 ansible_host=10.0.0.1 ansible_user=root hostname=pve1.localdomain
 
 [proxmox_cluster_nodes]
-pve2 ansible_host=46.224.54.72 ansible_user=root hostname=pve2.localdomain
+pve2 ansible_host=10.0.0.2 ansible_user=root hostname=pve2.localdomain
 
 [proxmox_cluster:children]
 proxmox_cluster_primary
@@ -156,7 +156,7 @@ Si vous préférez créer le cluster manuellement :
 ### Sur le nœud primaire (pve1)
 
 ```bash
-ssh root@46.224.30.198
+ssh root@10.0.0.1
 
 # Créer le cluster
 pvecm create pve-cluster
@@ -199,10 +199,10 @@ Membership information
 ### Sur chaque nœud secondaire (pve2)
 
 ```bash
-ssh root@46.224.54.72
+ssh root@10.0.0.2
 
 # Joindre le cluster
-pvecm add 46.224.30.198 --use_ssh
+pvecm add 10.0.0.1 --use_ssh
 
 # Entrer le mot de passe root de pve1 si demandé
 
@@ -272,8 +272,8 @@ ls -la /etc/pve/nodes/
 ### 5. Tester l'interface web
 
 Accéder à l'interface web de n'importe quel nœud :
-- `https://46.224.30.198:8006`
-- `https://46.224.54.72:8006`
+- `https://10.0.0.1:8006`
+- `https://10.0.0.2:8006`
 
 Les deux interfaces doivent afficher **tous les nœuds** du cluster.
 
@@ -310,7 +310,7 @@ pvecm status
 # Le cluster doit toujours être quorate avec 1 seul nœud
 
 # Redémarrer pve2
-ssh root@46.224.54.72
+ssh root@10.0.0.2
 systemctl start pve-cluster
 ```
 

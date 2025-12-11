@@ -43,7 +43,7 @@ Les serveurs doivent être:
 
 ```bash
 git clone <repository-url>
-cd ig-infra-as-code/ansible
+cd ansible-proxmox-baremetal/ansible
 ```
 
 ### 2. Configurer l'inventaire
@@ -63,11 +63,11 @@ Structure du fichier:
 ```ini
 # Nœud primaire (celui qui crée le cluster)
 [proxmox_cluster_primary]
-pve1 ansible_host=46.224.30.198 ansible_user=root hostname=pve1.localdomain
+pve1 ansible_host=10.0.0.1 ansible_user=root hostname=pve1.localdomain
 
 # Nœuds secondaires (ceux qui rejoignent)
 [proxmox_cluster_nodes]
-pve2 ansible_host=46.224.54.72 ansible_user=root hostname=pve2.localdomain
+pve2 ansible_host=10.0.0.2 ansible_user=root hostname=pve2.localdomain
 
 # Groupe parent
 [proxmox_cluster:children]
@@ -105,11 +105,11 @@ Modifiez les lignes avec vos informations :
 ```ini
 # Nœud primaire du cluster
 [proxmox_cluster_primary]
-pve1 ansible_host=46.224.30.198 ansible_user=root hostname=pve1.localdomain ansible_password=votre_mdp_root
+pve1 ansible_host=10.0.0.1 ansible_user=root hostname=pve1.localdomain ansible_password=votre_mdp_root
 
 # Nœuds secondaires
 [proxmox_cluster_nodes]
-pve2 ansible_host=46.224.54.72 ansible_user=root hostname=pve2.localdomain ansible_password=votre_mdp_root
+pve2 ansible_host=10.0.0.2 ansible_user=root hostname=pve2.localdomain ansible_password=votre_mdp_root
 ```
 
 **Note** :
@@ -243,7 +243,7 @@ make cluster-health
 Connectez-vous en SSH à n'importe quel nœud:
 
 ```bash
-ssh root@46.224.30.198
+ssh root@10.0.0.1
 
 # Statut du cluster
 pvecm status
@@ -266,8 +266,8 @@ ls -la /etc/pve/nodes/
 Accédez à l'interface web de n'importe quel nœud:
 
 ```
-https://46.224.30.198:8006
-https://46.224.54.72:8006
+https://10.0.0.1:8006
+https://10.0.0.2:8006
 ```
 
 Dans le menu "Datacenter", vous devriez voir tous les nœuds du cluster.
@@ -281,8 +281,8 @@ Dans le menu "Datacenter", vous devriez voir tous les nœuds du cluster.
 
 ```ini
 [proxmox_cluster_nodes]
-pve2 ansible_host=46.224.54.72 ansible_user=root hostname=pve2.localdomain
-pve3 ansible_host=46.224.55.80 ansible_user=root hostname=pve3.localdomain  # Nouveau
+pve2 ansible_host=10.0.0.2 ansible_user=root hostname=pve2.localdomain
+pve3 ansible_host=10.0.0.3 ansible_user=root hostname=pve3.localdomain  # Nouveau
 ```
 
 3. Relancer le playbook (il détectera le cluster existant et ajoutera seulement le nouveau nœud):
@@ -334,10 +334,10 @@ Confirmez en tapant `destroy` quand demandé.
 cat inventory/proxmox-cluster.ini
 
 # Vérifier la connectivité réseau
-ping 46.224.30.198
+ping 10.0.0.1
 
 # Tester SSH manuellement avec le mot de passe
-ssh root@46.224.30.198
+ssh root@10.0.0.1
 ```
 
 ### Problème: "Quorum not reached"
@@ -347,7 +347,7 @@ ssh root@46.224.30.198
 **Solution** (cluster 2 nœuds):
 ```bash
 # Se connecter au nœud actif
-ssh root@46.224.30.198
+ssh root@10.0.0.1
 
 # Ajuster le quorum attendu (temporaire)
 pvecm expected 1
@@ -411,7 +411,7 @@ ansible-playbook -i inventory/proxmox-cluster.ini playbooks/create-proxmox-clust
 ansible-playbook -i inventory/proxmox-cluster.ini playbooks/create-proxmox-cluster.yml -vvv
 
 # Vérifier les logs Corosync sur un nœud
-ssh root@46.224.30.198
+ssh root@10.0.0.1
 journalctl -u corosync -f
 
 # Vérifier les logs pve-cluster

@@ -278,7 +278,7 @@ En cas de problème :
 1. Lancer `./scripts/check.sh` pour diagnostiquer
 2. Vérifier les logs Ansible
 3. Consulter [docs/06-troubleshooting.md](../docs/06-troubleshooting.md)
-4. Contact : infrastructure@inter-gestion.com
+4. Contact : your-email@example.com
 
 ---
 

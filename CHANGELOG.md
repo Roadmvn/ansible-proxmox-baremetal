@@ -302,13 +302,13 @@ Première version du système d'installation automatisée de Proxmox VE.
 
 ## Support
 
-- Email : infrastructure@inter-gestion.com
+- Email : your-email@example.com
 - Documentation : `docs/`
 - Issues : GitHub
 
 ## Contributeurs
 
-- Inter-Gestion IT Team
+- Community
 
 ## Licence
 

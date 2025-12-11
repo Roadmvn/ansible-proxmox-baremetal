@@ -19,7 +19,7 @@ enable_versioning  = false
 
 # Additional tags
 tags = {
-  Owner       = "Inter-Gestion IT"
+  Owner       = "Your Name"
   Environment = "Production"
   CostCenter  = "Infrastructure"
 }

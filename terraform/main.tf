@@ -21,7 +21,7 @@ resource "aws_s3_bucket" "proxmox_backups" {
   bucket = var.bucket_name
 
   tags = {
-    Name        = "Proxmox Backups - Inter-Gestion"
+    Name        = "Proxmox Backups"
     Environment = "Production"
     ManagedBy   = "Terraform"
     Purpose     = "Kopia Backups"

@@ -491,7 +491,7 @@ Si le problème persiste :
 1. **Vérifier les logs** : `/var/log/syslog`, `journalctl -u corosync`, `journalctl -u pve-cluster`
 2. **Forum Proxmox** : https://forum.proxmox.com/
 3. **Documentation officielle** : https://pve.proxmox.com/wiki/
-4. **Support** : infrastructure@inter-gestion.com
+4. **Support** : your-email@example.com
 
 Fournir :
 - Sortie de `pvecm status`

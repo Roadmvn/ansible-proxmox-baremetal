@@ -42,10 +42,10 @@ kopia_keep_annual: 0
 smtp_enabled: true
 smtp_host: "smtp.example.com"
 smtp_port: "587"
-smtp_user: "infrastructure@inter-gestion.com"
+smtp_user: "your-email@example.com"
 smtp_password: "CHANGE_ME"
-smtp_from: "infrastructure@inter-gestion.com"
-smtp_to: "infrastructure@inter-gestion.com"
+smtp_from: "your-email@example.com"
+smtp_to: "your-email@example.com"
 smtp_use_tls: true
 notify_on_success: true
 notify_on_error: true

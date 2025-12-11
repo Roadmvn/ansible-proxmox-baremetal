@@ -95,7 +95,7 @@ health: ## Vérifier la santé des systèmes déployés
 
 list: ## Lister les backups disponibles
 	@echo "$(GREEN)Liste des backups...$(NC)"
-	ansible all -m shell -a "/opt/ig-infra-as-code/scripts/proxmox-backup/list-backups.sh"
+	ansible all -m shell -a "/opt/ansible-proxmox/scripts/proxmox-backup/list-backups.sh"
 
 logs: ## Afficher les derniers logs (usage: make logs NODE=node1)
 	@echo "$(GREEN)Derniers logs de $(NODE)...$(NC)"

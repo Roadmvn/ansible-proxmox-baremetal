@@ -13,7 +13,7 @@ RED='\033[0;31m'
 NC='\033[0m'
 
 echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}Setup Ansible - Inter-Gestion${NC}"
+echo -e "${GREEN}Setup Ansible - Proxmox Baremetal${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 
@@ -62,7 +62,7 @@ $NODE1_NAME ansible_host=$NODE1_IP ansible_user=root node_name=$NODE1_NAME confi
 [proxmox_test:vars]
 ansible_ssh_private_key_file=~/.ssh/id_rsa
 ansible_python_interpreter=/usr/bin/python3
-base_dir=/opt/ig-infra-as-code
+base_dir=/opt/ansible-proxmox
 EOF
 else
     read -p "IP nœud 1: " NODE1_IP
@@ -79,7 +79,7 @@ node3 ansible_host=$NODE3_IP ansible_user=root node_name=node3 config_backup_off
 [proxmox_cluster:vars]
 ansible_ssh_private_key_file=~/.ssh/id_rsa
 ansible_python_interpreter=/usr/bin/python3
-base_dir=/opt/ig-infra-as-code
+base_dir=/opt/ansible-proxmox
 EOF
 fi
 
@@ -95,13 +95,13 @@ read -sp "Password Kopia (chiffrement): " KOPIA_PASS
 echo ""
 read -sp "Password Email SMTP: " SMTP_PASS
 echo ""
-read -p "Email utilisateur [infrastructure@inter-gestion.com]: " SMTP_USER
-SMTP_USER=${SMTP_USER:-infrastructure@inter-gestion.com}
+read -p "Email utilisateur [your-email@example.com]: " SMTP_USER
+SMTP_USER=${SMTP_USER:-your-email@example.com}
 
 # Mise à jour group_vars/all.yml
 sed -i.bak "s/CHANGEZ_MOI_PASSWORD_FORT_KOPIA/$KOPIA_PASS/" "$ANSIBLE_DIR/group_vars/all.yml"
 sed -i.bak "s/CHANGEZ_MOI_PASSWORD_EMAIL/$SMTP_PASS/" "$ANSIBLE_DIR/group_vars/all.yml"
-sed -i.bak "s/infrastructure@inter-gestion.com/$SMTP_USER/g" "$ANSIBLE_DIR/group_vars/all.yml"
+sed -i.bak "s/your-email@example.com/$SMTP_USER/g" "$ANSIBLE_DIR/group_vars/all.yml"
 
 rm -f "$ANSIBLE_DIR/group_vars/all.yml.bak"
 

@@ -11,7 +11,7 @@ node3 ansible_host=10.0.0.3 ansible_user=root node_name=node3 config_backup_offs
 [proxmox_cluster:vars]
 ansible_ssh_private_key_file=~/.ssh/id_rsa
 ansible_python_interpreter=/usr/bin/python3
-base_dir=/opt/ig-infra-as-code
+base_dir=/opt/ansible-proxmox
 
 # Utilisation :
 # ansible-playbook -i inventory/production.ini playbook.yml

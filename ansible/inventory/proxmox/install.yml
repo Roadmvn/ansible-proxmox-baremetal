@@ -6,10 +6,10 @@ all:
     proxmox_install:
       hosts:
         pve1:
-          ansible_host: 46.224.30.198
+          ansible_host: 10.0.0.1
           hostname: pve1.localdomain
         pve2:
-          ansible_host: 46.224.54.72
+          ansible_host: 10.0.0.2
           hostname: pve2.localdomain
       vars:
         ansible_user: root
