@@ -4,6 +4,7 @@
 
 .PHONY: help test deploy deploy-one deploy-test update backup check setup clean \
         proxmox-install proxmox-install-one proxmox-install-test proxmox-cluster proxmox-cluster-test proxmox-cluster-destroy proxmox-cluster-status proxmox-cluster-health \
+        terraform-install terraform-install-test terraform-install-dry \
         k8s-setup k8s-cluster k8s-scale k8s-reset k8s-upgrade k8s-test k8s-kubeconfig
 
 # Couleurs
@@ -32,6 +33,11 @@ help: ## Afficher l'aide
 	@echo "  $(YELLOW)make proxmox-cluster-destroy$(NC)   Detruire le cluster"
 	@echo "  $(YELLOW)make proxmox-cluster-status$(NC)    Statut du cluster"
 	@echo "  $(YELLOW)make proxmox-cluster-health$(NC)    Sante du cluster"
+	@echo ""
+	@echo "$(GREEN)Terraform :$(NC)"
+	@echo "  $(YELLOW)make terraform-install-test$(NC)    Tester connectivite"
+	@echo "  $(YELLOW)make terraform-install$(NC)         Installer Terraform"
+	@echo "  $(YELLOW)make terraform-install-dry$(NC)     Simulation (dry-run)"
 	@echo ""
 	@echo "$(GREEN)Kubernetes :$(NC)"
 	@echo "  $(YELLOW)make k8s-setup$(NC)                 Installer Kubespray"
@@ -186,6 +192,22 @@ proxmox-cluster-health: ## Verifier la sante du cluster
 	@echo "$(GREEN)Verification de la sante du cluster...$(NC)"
 	@ansible -i inventory/proxmox/cluster.yml proxmox_cluster_primary -m shell -a "pvecm status" -b | grep -v ">>>"
 	@ansible -i inventory/proxmox/cluster.yml proxmox_cluster_primary -m shell -a "pvecm nodes" -b | grep -v ">>>"
+
+# ============================================
+# TERRAFORM
+# ============================================
+
+terraform-install-test: ## Tester la connectivite vers les serveurs Proxmox
+	@echo "$(GREEN)Test de connectivite vers les serveurs Proxmox...$(NC)"
+	ansible -i inventory/proxmox/terraform-install.yml proxmox_terraform -m ping
+
+terraform-install: ## Installer Terraform sur les serveurs Proxmox
+	@echo "$(GREEN)Installation de Terraform sur les serveurs Proxmox...$(NC)"
+	ansible-playbook -i inventory/proxmox/terraform-install.yml playbooks/install-terraform.yml
+
+terraform-install-dry: ## Simulation installation Terraform (dry-run)
+	@echo "$(YELLOW)Simulation installation Terraform...$(NC)"
+	ansible-playbook -i inventory/proxmox/terraform-install.yml playbooks/install-terraform.yml --check --diff
 
 # ============================================
 # KUBERNETES

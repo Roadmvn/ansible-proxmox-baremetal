@@ -1,0 +1,23 @@
+# ============================================
+# INVENTAIRE - INSTALLATION TERRAFORM
+# Usage: make terraform-install
+# ============================================
+
+all:
+  children:
+    proxmox_terraform:
+      hosts:
+        # Remplacez "pve1" par le nom de votre serveur
+        pve1:
+          # Remplacez par l'IP de votre serveur Proxmox
+          ansible_host: 10.0.0.1
+          hostname: pve1.localdomain
+      vars:
+        # Remplacez "root" par votre utilisateur SSH
+        ansible_user: root
+        # OPTION 1 : Utiliser une clé SSH (recommandé)
+        ansible_ssh_private_key_file: ~/.ssh/id_ed25519
+        # OPTION 2 : Utiliser un mot de passe (décommentez les lignes ci-dessous)
+        # ansible_ssh_pass: votre_mot_de_passe
+        # ansible_become_pass: votre_mot_de_passe  # Si sudo est requis
+        ansible_python_interpreter: /usr/bin/python3

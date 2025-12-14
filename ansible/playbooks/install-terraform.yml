@@ -1,0 +1,101 @@
+---
+# ============================================
+# PLAYBOOK: INSTALLATION TERRAFORM
+# Installation via le dépôt officiel HashiCorp
+# Documentation: https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli
+# ============================================
+
+- name: "Installation Terraform - Dépôt HashiCorp Officiel"
+  hosts: proxmox_terraform
+  gather_facts: true
+
+  tasks:
+    - name: Afficher les informations du serveur
+      ansible.builtin.debug:
+        msg:
+          - "==================================="
+          - "Installation Terraform"
+          - "==================================="
+          - "Serveur: {{ inventory_hostname }}"
+          - "IP: {{ ansible_host }}"
+          - "OS: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+          - "==================================="
+
+    - name: Vérifier que le système est Debian ou Ubuntu
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution == "Debian" or ansible_distribution == "Ubuntu"
+        fail_msg: "Ce playbook nécessite Debian ou Ubuntu"
+        success_msg: "Système compatible: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+
+    - name: Installer les dépendances requises
+      ansible.builtin.apt:
+        name:
+          - gnupg
+          - software-properties-common
+          - curl
+        state: present
+        update_cache: yes
+      environment:
+        DEBIAN_FRONTEND: noninteractive
+
+    - name: Télécharger et ajouter la clé GPG HashiCorp
+      ansible.builtin.shell:
+        cmd: curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+      args:
+        creates: /usr/share/keyrings/hashicorp-archive-keyring.gpg
+
+    - name: Vérifier l'empreinte de la clé GPG HashiCorp
+      ansible.builtin.shell:
+        cmd: gpg --no-default-keyring --keyring /usr/share/keyrings/hashicorp-archive-keyring.gpg --fingerprint
+      register: gpg_fingerprint
+      changed_when: false
+
+    - name: Afficher l'empreinte de la clé GPG
+      ansible.builtin.debug:
+        var: gpg_fingerprint.stdout_lines
+
+    - name: Ajouter le dépôt HashiCorp APT
+      ansible.builtin.shell:
+        cmd: echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com {{ ansible_distribution_release }} main" | tee /etc/apt/sources.list.d/hashicorp.list
+      args:
+        creates: /etc/apt/sources.list.d/hashicorp.list
+
+    - name: Mettre à jour le cache APT
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Installer Terraform
+      ansible.builtin.apt:
+        name: terraform
+        state: present
+      environment:
+        DEBIAN_FRONTEND: noninteractive
+      register: terraform_install
+
+    - name: Vérifier l'installation de Terraform
+      ansible.builtin.command:
+        cmd: terraform --version
+      register: terraform_version
+      changed_when: false
+
+    - name: Afficher le résultat de l'installation
+      ansible.builtin.debug:
+        msg:
+          - "Installation Terraform terminée avec succès"
+          - "Version installée: {{ terraform_version.stdout }}"
+          - "Serveur: {{ inventory_hostname }}"
+          - "IP: {{ ansible_host }}"
+
+    - name: Créer fichier de statut
+      ansible.builtin.copy:
+        content: |
+          Installation Terraform
+          Date: {{ ansible_date_time.iso8601 }}
+          Serveur: {{ inventory_hostname }}
+          IP: {{ ansible_host }}
+          Version: {{ terraform_version.stdout }}
+          Méthode: Dépôt officiel HashiCorp APT
+        dest: /root/terraform-installation-status.txt
+        mode: '0644'
