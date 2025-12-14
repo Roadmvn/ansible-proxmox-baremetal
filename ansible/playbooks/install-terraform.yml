@@ -61,15 +61,11 @@
       args:
         creates: /etc/apt/sources.list.d/hashicorp.list
 
-    - name: Mettre à jour le cache APT
-      ansible.builtin.apt:
-        update_cache: yes
-        cache_valid_time: 3600
-
     - name: Installer Terraform
       ansible.builtin.apt:
         name: terraform
         state: present
+        update_cache: yes
       environment:
         DEBIAN_FRONTEND: noninteractive
       register: terraform_install
@@ -87,15 +83,3 @@
           - "Version installée: {{ terraform_version.stdout }}"
           - "Serveur: {{ inventory_hostname }}"
           - "IP: {{ ansible_host }}"
-
-    - name: Créer fichier de statut
-      ansible.builtin.copy:
-        content: |
-          Installation Terraform
-          Date: {{ ansible_date_time.iso8601 }}
-          Serveur: {{ inventory_hostname }}
-          IP: {{ ansible_host }}
-          Version: {{ terraform_version.stdout }}
-          Méthode: Dépôt officiel HashiCorp APT
-        dest: /root/terraform-installation-status.txt
-        mode: '0644'

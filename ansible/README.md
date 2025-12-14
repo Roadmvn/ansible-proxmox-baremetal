@@ -267,10 +267,9 @@ nano group_vars/all.yml
 
 ## 📚 Documentation Complète
 
-- [Installation générale](../docs/01-installation.md)
-- [Configuration](../docs/02-configuration.md)
-- [Utilisation](../docs/03-usage.md)
-- [Dépannage](../docs/06-troubleshooting.md)
+- [Création du Cluster](docs/proxmox-cluster-creation.md)
+- [Workflow & Utilisation](docs/proxmox-cluster-workflow.md)
+- [Dépannage](docs/proxmox-cluster-troubleshooting.md)
 
 ## 🆘 Support
 
